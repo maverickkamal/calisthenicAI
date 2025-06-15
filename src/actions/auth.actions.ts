@@ -3,8 +3,9 @@
 
 import { z } from "zod";
 import { redirect } from 'next/navigation';
-// import { auth } from '@/lib/firebase'; // Actual Firebase auth instance
-// import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import { cookies } from 'next/headers';
+import { auth } from '@/lib/firebase'; // Actual Firebase auth instance
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 
 const LoginSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -42,36 +43,37 @@ export async function login(prevState: LoginFormState | undefined, formData: For
   const { email, password } = validatedFields.data;
 
   try {
-    // In a real app, you'd call Firebase auth here:
-    // const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    // const idToken = await userCredential.user.getIdToken();
-    // Set cookie with idToken (e.g., using 'cookies-next' or similar library)
-    // For now, simulate success:
-    console.log(`Simulating login for: ${email}`);
-    // On successful login, you would set a cookie and redirect.
-    // The redirect should be handled by the form component or middleware based on cookie presence.
-    // This action can return a success message or specific data.
-    // For demonstration, we will redirect from the server action (though client-side redirect after setting cookie is common)
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const idToken = await userCredential.user.getIdToken();
+    cookies().set('firebaseAuthToken', idToken, { 
+      httpOnly: true, 
+      path: '/', 
+      secure: process.env.NODE_ENV === 'production', 
+      maxAge: 60 * 60 * 24 * 7 // 1 week
+    });
   } catch (error: any) {
-    // Firebase error codes can be handled here
-    // e.g., error.code === 'auth/user-not-found' or 'auth/wrong-password'
+    let errorMessage = "Login failed. Please try again.";
+    if (error.code) {
+      switch (error.code) {
+        case 'auth/invalid-credential':
+          errorMessage = "Invalid email or password.";
+          break;
+        case 'auth/user-disabled':
+          errorMessage = "This account has been disabled.";
+          break;
+        case 'auth/invalid-email':
+            errorMessage = "Invalid email format.";
+            break;
+        default:
+          errorMessage = "An unexpected error occurred during login.";
+      }
+    }
     return {
-      errors: { form: ["Invalid email or password."] },
-      message: "Login failed. Please try again.",
+      errors: { form: [errorMessage] },
+      message: "Login failed.",
     };
   }
-
-  // If successful, redirect to dashboard.
-  // This needs to be handled carefully with server actions.
-  // Typically, the client component checks the state and redirects.
-  // For now, let's assume the cookie is set and middleware will redirect.
-  // Or, use redirect() from 'next/navigation' if cookie setup is handled here.
-  // For placeholder, we'll redirect, but cookie management is key.
-  // cookies().set('firebaseAuthToken', 'fake-token', { httpOnly: true, path: '/' });
   redirect('/dashboard');
-  
-  // This part is unreachable due to redirect, but shows what a success state might look like.
-  // return { message: "Login successful!" }; 
 }
 
 
@@ -100,35 +102,49 @@ export async function signup(prevState: SignupFormState | undefined, formData: F
   const { email, password } = validatedFields.data;
 
   try {
-    // In a real app, you'd call Firebase auth here:
-    // const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    // const idToken = await userCredential.user.getIdToken();
-    // Set cookie with idToken
-    console.log(`Simulating signup for: ${email}`);
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const idToken = await userCredential.user.getIdToken();
+    // Automatically log in user by setting the cookie
+    cookies().set('firebaseAuthToken', idToken, { 
+        httpOnly: true, 
+        path: '/', 
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 60 * 60 * 24 * 7 // 1 week
+    });
   } catch (error: any) {
-    // Firebase error codes can be handled here
-    // e.g., error.code === 'auth/email-already-in-use'
+    let errorMessage = "Signup failed. Please try again.";
+    if (error.code) {
+      switch (error.code) {
+        case 'auth/email-already-in-use':
+          errorMessage = "This email address is already in use.";
+          break;
+        case 'auth/weak-password':
+          errorMessage = "The password is too weak. Please choose a stronger password.";
+          break;
+        case 'auth/invalid-email':
+            errorMessage = "Invalid email format.";
+            break;
+        default:
+          errorMessage = "An unexpected error occurred during signup.";
+      }
+    }
      return {
-      errors: { form: ["Signup failed. This email might already be in use."] },
-      message: "Signup failed. Please try again.",
+      errors: { form: [errorMessage] },
+      message: "Signup failed.",
       success: false,
     };
   }
   
-  // cookies().set('firebaseAuthToken', 'fake-token', { httpOnly: true, path: '/' });
   redirect('/dashboard');
-  // return { message: "Signup successful! Please login.", success: true };
 }
 
 export async function logout() {
   try {
-    // In a real app, you'd call Firebase auth signOut and clear the cookie:
-    // await signOut(auth);
-    // cookies().delete('firebaseAuthToken');
-    console.log("Simulating logout");
+    await signOut(auth);
+    cookies().delete('firebaseAuthToken');
   } catch (error) {
     console.error("Logout failed", error);
-    // Handle error appropriately
+    // Optionally, display a message to the user or handle more gracefully
   }
   redirect('/login');
 }
