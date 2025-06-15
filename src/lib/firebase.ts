@@ -3,7 +3,7 @@ import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 
-const firebaseConfig = {
+const firebaseConfigValues = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
@@ -12,9 +12,35 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
+// Check for missing Firebase configuration environment variables
+const requiredEnvVars: (keyof typeof firebaseConfigValues)[] = [
+  'apiKey',
+  'authDomain',
+  'projectId',
+  'storageBucket',
+  'messagingSenderId',
+  'appId',
+];
+
+for (const key of requiredEnvVars) {
+  if (!firebaseConfigValues[key]) {
+    const envVarName = `NEXT_PUBLIC_FIREBASE_${key.replace(/([A-Z])/g, '_$1').toUpperCase()}`;
+    // Correcting the envVarName for apiKey specifically if it doesn't follow the general pattern for others.
+    // For example, if it's NEXT_PUBLIC_FIREBASE_API_KEY not NEXT_PUBLIC_FIREBASE_API_KEY_KEY
+    // Assuming the pattern from process.env.NEXT_PUBLIC_FIREBASE_API_KEY is standard:
+    const specificEnvName = `NEXT_PUBLIC_FIREBASE_${key === 'apiKey' ? 'API_KEY' : key.replace(/([A-Z])/g, '_$1').toUpperCase().replace(/^_/, '')}`;
+    
+    throw new Error(
+      `Firebase configuration error: Missing environment variable ${specificEnvName}. ` +
+      `Please ensure it is correctly set in your .env file or environment. ` +
+      `Current value for ${key}: '${firebaseConfigValues[key]}'`
+    );
+  }
+}
+
 let app: FirebaseApp;
 if (!getApps().length) {
-  app = initializeApp(firebaseConfig);
+  app = initializeApp(firebaseConfigValues);
 } else {
   app = getApps()[0];
 }
