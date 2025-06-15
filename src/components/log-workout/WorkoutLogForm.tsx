@@ -20,9 +20,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlusCircle, Trash2 } from "lucide-react";
-import React, { useState } from 'react';
+import React, { useState, useActionState } from 'react'; // Updated import
+import { useFormStatus } from "react-dom"; // Kept for SubmitButton
 import { logWorkoutAction, type LogWorkoutFormState } from "@/actions/workout.actions";
-import { useFormState, useFormStatus } from "react-dom";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import type { WorkoutType, DifficultyRating, FatigueLevel, SorenessLevel, Mood, EnergyLevel } from '@/lib/types';
 
@@ -84,7 +84,7 @@ export function WorkoutLogForm() {
   });
 
   const initialState: LogWorkoutFormState = { message: null, errors: {}, summary: null };
-  const [state, dispatch] = useFormState(logWorkoutAction, initialState);
+  const [state, dispatch] = useActionState(logWorkoutAction, initialState); // Updated usage
   
   const [showSummary, setShowSummary] = useState(false);
 

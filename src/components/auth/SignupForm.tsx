@@ -1,7 +1,8 @@
 // src/components/auth/SignupForm.tsx
 "use client";
 
-import { useFormState, useFormStatus } from "react-dom";
+import { useActionState } from "react";
+import { useFormStatus } from "react-dom";
 import Link from "next/link";
 import { signup, type SignupFormState } from "@/actions/auth.actions";
 import { Button } from "@/components/ui/button";
@@ -22,7 +23,7 @@ function SubmitButton() {
 
 export function SignupForm() {
   const initialState: SignupFormState = { message: null, errors: {}, success: false };
-  const [state, dispatch] = useFormState(signup, initialState);
+  const [state, dispatch] = useActionState(signup, initialState);
 
   return (
     <Card>
