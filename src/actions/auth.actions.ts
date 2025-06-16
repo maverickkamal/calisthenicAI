@@ -52,6 +52,7 @@ export async function login(prevState: LoginFormState | undefined, formData: For
       maxAge: 60 * 60 * 24 * 7 // 1 week
     });
   } catch (error: any) {
+    console.error("Login Error:", error); // Added detailed logging
     let errorMessage = "Login failed. Please try again.";
     if (error.code) {
       switch (error.code) {
@@ -112,6 +113,7 @@ export async function signup(prevState: SignupFormState | undefined, formData: F
         maxAge: 60 * 60 * 24 * 7 // 1 week
     });
   } catch (error: any) {
+    console.error("Signup Error:", error); // Added detailed logging
     let errorMessage = "Signup failed. Please try again.";
     if (error.code) {
       switch (error.code) {
