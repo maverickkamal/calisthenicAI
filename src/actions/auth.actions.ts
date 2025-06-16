@@ -1,3 +1,4 @@
+
 // src/actions/auth.actions.ts
 "use server";
 
@@ -52,11 +53,11 @@ export async function login(prevState: LoginFormState | undefined, formData: For
       maxAge: 60 * 60 * 24 * 7 // 1 week
     });
   } catch (error: any) {
-    console.error("Login Error:", error); // Added detailed logging
+    console.error("Login Error (Raw):", error); 
     let errorMessage = "Login failed. Please try again.";
     if (error.code) {
       switch (error.code) {
-        case 'auth/invalid-credential':
+        case 'auth/invalid-credential': // Catches user-not-found and wrong-password
           errorMessage = "Invalid email or password.";
           break;
         case 'auth/user-disabled':
@@ -66,8 +67,10 @@ export async function login(prevState: LoginFormState | undefined, formData: For
             errorMessage = "Invalid email format.";
             break;
         default:
-          errorMessage = "An unexpected error occurred during login.";
+          errorMessage = (error as any).message || "An unexpected error occurred during login. Check server logs.";
       }
+    } else if (error.message) {
+        errorMessage = error.message;
     }
     return {
       errors: { form: [errorMessage] },
@@ -105,7 +108,6 @@ export async function signup(prevState: SignupFormState | undefined, formData: F
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const idToken = await userCredential.user.getIdToken();
-    // Automatically log in user by setting the cookie
     cookies().set('firebaseAuthToken', idToken, { 
         httpOnly: true, 
         path: '/', 
@@ -113,25 +115,38 @@ export async function signup(prevState: SignupFormState | undefined, formData: F
         maxAge: 60 * 60 * 24 * 7 // 1 week
     });
   } catch (error: any) {
-    console.error("Signup Error:", error); // Added detailed logging
-    let errorMessage = "Signup failed. Please try again.";
-    if (error.code) {
-      switch (error.code) {
-        case 'auth/email-already-in-use':
-          errorMessage = "This email address is already in use.";
-          break;
-        case 'auth/weak-password':
-          errorMessage = "The password is too weak. Please choose a stronger password.";
-          break;
-        case 'auth/invalid-email':
-            errorMessage = "Invalid email format.";
-            break;
-        default:
-          errorMessage = "An unexpected error occurred during signup.";
-      }
+    console.error("Signup Error (Raw):", error); 
+    let specificErrorMessage = "An unexpected error occurred during signup. Please check server logs for details.";
+
+    if (error instanceof Error) {
+        const firebaseError = error as any; // Cast to access potential 'code' property
+        if (typeof firebaseError.code === 'string') {
+            switch (firebaseError.code) {
+                case 'auth/email-already-in-use':
+                    specificErrorMessage = "This email address is already in use.";
+                    break;
+                case 'auth/weak-password':
+                    specificErrorMessage = "The password is too weak. Please choose a stronger password.";
+                    break;
+                case 'auth/invalid-email':
+                    specificErrorMessage = "Invalid email format.";
+                    break;
+                case 'auth/operation-not-allowed':
+                    specificErrorMessage = "Email/Password sign-up is not enabled for this project. Please enable it in your Firebase console's Authentication > Sign-in method settings.";
+                    break;
+                default:
+                    specificErrorMessage = firebaseError.message || `An unexpected error occurred (code: ${firebaseError.code}). Check server logs.`;
+                    break;
+            }
+        } else {
+            specificErrorMessage = error.message || "An unexpected error occurred. Check server logs.";
+        }
+    } else if (typeof error === 'string') {
+        specificErrorMessage = error;
     }
+    
      return {
-      errors: { form: [errorMessage] },
+      errors: { form: [specificErrorMessage] },
       message: "Signup failed.",
       success: false,
     };
@@ -145,7 +160,7 @@ export async function logout() {
     await signOut(auth);
     cookies().delete('firebaseAuthToken');
   } catch (error) {
-    console.error("Logout failed", error);
+    console.error("Logout failed (Raw):", error);
     // Optionally, display a message to the user or handle more gracefully
   }
   redirect('/login');
