@@ -64,10 +64,13 @@ export async function login(prevState: LoginFormState | undefined, formData: For
           errorMessage = "This account has been disabled.";
           break;
         case 'auth/invalid-email':
-            errorMessage = "Invalid email format.";
-            break;
+          errorMessage = "Invalid email format.";
+          break;
+        case 'auth/configuration-not-found':
+          errorMessage = "Firebase configuration error (auth/configuration-not-found). Please ensure your API key and project settings in .env are correct and that Firebase Authentication is properly set up in your Firebase project console.";
+          break;
         default:
-          errorMessage = (error as any).message || "An unexpected error occurred during login. Check server logs.";
+          errorMessage = (error as any).message || `An unexpected error occurred during login (code: ${error.code}). Check server logs.`;
       }
     } else if (error.message) {
         errorMessage = error.message;
@@ -133,6 +136,9 @@ export async function signup(prevState: SignupFormState | undefined, formData: F
                     break;
                 case 'auth/operation-not-allowed':
                     specificErrorMessage = "Email/Password sign-up is not enabled for this project. Please enable it in your Firebase console's Authentication > Sign-in method settings.";
+                    break;
+                case 'auth/configuration-not-found':
+                    specificErrorMessage = "Firebase configuration error (auth/configuration-not-found). Please ensure your API key and project settings in .env are correct and that Firebase Authentication is properly set up in your Firebase project console.";
                     break;
                 default:
                     specificErrorMessage = firebaseError.message || `An unexpected error occurred (code: ${firebaseError.code}). Check server logs.`;
