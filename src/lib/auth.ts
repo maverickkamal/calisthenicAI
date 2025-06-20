@@ -19,9 +19,8 @@ export async function getCurrentUser(): Promise<{ uid: string; email: string; } 
     }
     const payloadBase64 = tokenParts[1].replace(/-/g, '+').replace(/_/g, '/');
     
-    // In Node.js >= 16, atob is available globally.
-    // For environments where it might not be, Buffer can be used: Buffer.from(payloadBase64, 'base64').toString('utf8')
-    const decodedPayload = atob(payloadBase64);
+    // Using Buffer is more robust for decoding base64 in different JS environments (Node.js/edge) than atob.
+    const decodedPayload = Buffer.from(payloadBase64, 'base64').toString('utf8');
     const payload = JSON.parse(decodedPayload);
     
     // Firebase ID tokens store the UID in the 'user_id' and 'sub' fields.

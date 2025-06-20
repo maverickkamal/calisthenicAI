@@ -15,6 +15,7 @@ export function middleware(request: NextRequest) {
     '/progress',
     '/journal',
     '/recommendations',
+    '/settings', // Added settings to protected routes
   ];
 
   const authRoutes = ['/login', '/signup'];

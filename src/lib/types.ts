@@ -24,9 +24,9 @@ export type Mood = "Great" | "Good" | "Okay" | "Bad" | "Awful";
 export type EnergyLevel = "High" | "Medium" | "Low";
 
 export interface WorkoutLog {
-  id?: string; // Firestore document ID
+  id: string; // Firestore document ID
   userId: string;
-  date: Date;
+  date: string; // Stored as ISO string for serializability
   workoutType: WorkoutType;
   exercises: ExerciseLog[];
   difficultyRating: DifficultyRating;
@@ -45,18 +45,16 @@ export interface WorkoutSummary {
 }
 
 export interface TrainingPlan {
-  id?: string;
+  id: string;
   userId: string;
   planName: string;
-  // Structure for daily workouts, e.g., Day 1: Push, Day 2: Pull, etc.
+  // This matches what the form and action currently handle (simple strings).
   schedule: Array<{
     day: string; // e.g., "Monday", "Day 1"
-    workoutType: WorkoutType;
-    exercises: ExerciseLog[]; // Suggested exercises
+    exercises: string; // e.g., "Pushups: 3x10\nDips: 3x8"
   }>;
   warnings?: string[];
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string; // Stored as ISO string
 }
 
 export interface UserPreferences {
