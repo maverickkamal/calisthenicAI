@@ -50,7 +50,7 @@ export async function login(prevState: LoginFormState | undefined, formData: For
       httpOnly: true, 
       path: '/', 
       secure: process.env.NODE_ENV === 'production', 
-      maxAge: 60 * 60 * 24 * 7 // 1 week
+      maxAge: 60 * 60 * 2 // 2 hours
     });
   } catch (error: any) {
     console.error("Login Error (Raw):", error); 
@@ -115,7 +115,7 @@ export async function signup(prevState: SignupFormState | undefined, formData: F
         httpOnly: true, 
         path: '/', 
         secure: process.env.NODE_ENV === 'production',
-        maxAge: 60 * 60 * 24 * 7 // 1 week
+        maxAge: 60 * 60 * 2 // 2 hours
     });
   } catch (error: any) {
     console.error("Signup Error (Raw):", error); 
@@ -163,11 +163,15 @@ export async function signup(prevState: SignupFormState | undefined, formData: F
 
 export async function logout() {
   try {
-    await signOut(auth);
+    // While Firebase client-side signOut is often used, it doesn't invalidate server-side session cookies
+    // A robust implementation would involve an API route to revoke the token with Firebase Admin SDK.
+    // For this app's scope, simply deleting the cookie is sufficient.
+    await signOut(auth); // Clear client-side state
     cookies().delete('firebaseAuthToken');
   } catch (error) {
     console.error("Logout failed (Raw):", error);
-    // Optionally, display a message to the user or handle more gracefully
+    // Even if client signOut fails, we must delete the cookie
+    cookies().delete('firebaseAuthToken');
   }
   redirect('/login');
 }

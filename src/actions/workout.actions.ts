@@ -4,10 +4,8 @@
 import { z } from "zod";
 import type { WorkoutLog, WorkoutSummary, ExerciseLog, WorkoutType, DifficultyRating, FatigueLevel, SorenessLevel, Mood, EnergyLevel } from "@/lib/types";
 import { summarizeWorkout, type SummarizeWorkoutInput } from "@/ai/flows/summarize-workout-flow";
-// import { db } from "@/lib/firebase"; // Actual Firestore instance
-// import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-// For user identification, you'd typically get the user ID from the session/auth token
-// const getUserId = () => "mockUserId"; // Placeholder
+import { getCurrentUser } from '@/lib/auth';
+import { addWorkoutLog } from '@/lib/firestore.service';
 
 const exerciseSchema = z.object({
   name: z.string().min(1, "Exercise name is required."),
@@ -45,6 +43,14 @@ export type LogWorkoutFormState = {
 
 
 export async function logWorkoutAction(prevState: LogWorkoutFormState | undefined, formData: FormData): Promise<LogWorkoutFormState> {
+  const user = await getCurrentUser();
+  if (!user) {
+    return { 
+      errors: { form: ["You must be logged in to log a workout."] }, 
+      message: "Authentication failed." 
+    };
+  }
+
   const rawExercises: any[] = [];
   formData.forEach((value, key) => {
     const match = key.match(/^exercises\[(\d+)\]\.(name|sets|reps)$/);
@@ -78,10 +84,9 @@ export async function logWorkoutAction(prevState: LogWorkoutFormState | undefine
   }
 
   const workoutData = validatedFields.data;
-  const userId = "mockUserId"; // Replace with actual user ID from session
 
-  const newLog: Omit<WorkoutLog, 'id' | 'date'> = {
-    userId,
+  const newLog: Omit<WorkoutLog, 'id' | 'userId'> = {
+    date: new Date(), // This will be replaced by server timestamp in the service
     workoutType: workoutData.workoutType as WorkoutType,
     exercises: workoutData.exercises.map(ex => ({
         name: ex.name,
@@ -97,14 +102,8 @@ export async function logWorkoutAction(prevState: LogWorkoutFormState | undefine
   };
 
   try {
-    // Save to Firestore (conceptual)
-    // const docRef = await addDoc(collection(db, `users/${userId}/workoutLogs`), {
-    //   ...newLog,
-    //   date: serverTimestamp(), // Use Firestore server timestamp
-    // });
-    // console.log("Workout log saved with ID: ", docRef.id);
-    console.log("Simulating saving workout log to Firestore:", newLog);
-
+    // Save to Firestore
+    await addWorkoutLog(user.uid, newLog);
 
     // Prepare input for AI summarization
     const aiInput: SummarizeWorkoutInput = {
@@ -119,9 +118,6 @@ export async function logWorkoutAction(prevState: LogWorkoutFormState | undefine
     };
 
     const aiSummary = await summarizeWorkout(aiInput);
-    
-    // In a real app, you might save this summary to Firestore as well.
-    console.log("AI Summary:", aiSummary);
 
     return {
       message: "Workout logged successfully and summarized by AI!",
@@ -130,8 +126,9 @@ export async function logWorkoutAction(prevState: LogWorkoutFormState | undefine
 
   } catch (error: any) {
     console.error("Error logging workout or getting AI summary:", error);
+    const errorMessage = error.message || "An unexpected error occurred. Please try again.";
     return {
-      errors: { form: ["An unexpected error occurred. Please try again."] },
+      errors: { form: [errorMessage] },
       message: "Failed to log workout.",
       summary: null,
     };

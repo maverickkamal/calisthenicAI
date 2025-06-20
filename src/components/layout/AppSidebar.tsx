@@ -23,9 +23,9 @@ import {
   BookOpen,
   Lightbulb,
   Settings,
+  LogOut,
 } from 'lucide-react';
 import { logout } from '@/actions/auth.actions';
-import { Button } from '../ui/button';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -72,7 +72,7 @@ export function AppSidebar() {
         <SidebarMenu>
             <SidebarMenuItem>
                  <SidebarMenuButton asChild tooltip="Settings">
-                     <Link href="/settings"> {/* Assuming a /settings route */}
+                     <Link href="/settings">
                          <Settings className="h-5 w-5" />
                          <span>Settings</span>
                      </Link>
@@ -81,7 +81,7 @@ export function AppSidebar() {
             <SidebarMenuItem>
                  <form action={logout} className="w-full">
                      <SidebarMenuButton type="submit" className="w-full text-destructive hover:bg-destructive/10 hover:text-destructive" tooltip="Log Out">
-                         <Dumbbell className="h-5 w-5 lucide lucide-log-out" />
+                         <LogOut className="h-5 w-5" />
                          <span>Log Out</span>
                      </SidebarMenuButton>
                  </form>

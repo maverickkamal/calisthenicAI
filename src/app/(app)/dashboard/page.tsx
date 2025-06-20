@@ -5,25 +5,100 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Activity, Dumbbell, Lightbulb, Target } from 'lucide-react';
 import Image from 'next/image';
+import { getCurrentUser } from '@/lib/auth';
+import { getWorkoutLogs } from '@/lib/firestore.service';
+import type { WorkoutLog } from '@/lib/types';
+import { getTrainingSuggestions, type TrainingSuggestionsInput } from '@/ai/flows/memory-context-flow';
+import { differenceInCalendarDays, isToday, isYesterday } from 'date-fns';
+import { redirect } from 'next/navigation';
 
 export const metadata: Metadata = {
   title: 'Dashboard - CalisthenicsAI',
   description: 'Your CalisthenicsAI dashboard.',
 };
 
-export default function DashboardPage() {
-  // Placeholder data - replace with actual data fetching
-  const userName = "User"; // Fetch from user session/profile
+function calculateStreak(logs: WorkoutLog[]): number {
+  if (logs.length === 0) {
+    return 0;
+  }
+
+  let streak = 0;
+  let lastWorkoutDate = new Date(logs[0].date);
+
+  if (isToday(lastWorkoutDate) || isYesterday(lastWorkoutDate)) {
+    streak = 1;
+    for (let i = 1; i < logs.length; i++) {
+      const currentDate = new Date(logs[i].date);
+      const diff = differenceInCalendarDays(lastWorkoutDate, currentDate);
+      if (diff === 1) {
+        streak++;
+        lastWorkoutDate = currentDate;
+      } else if (diff > 1) {
+        break; 
+      }
+      // if diff is 0, it's the same day, so we continue
+    }
+  }
+
+  return streak;
+}
+
+async function getNextGoalSuggestion(logs: WorkoutLog[]): Promise<string> {
+  if (logs.length === 0) {
+    return "Log your first workout to get a personalized goal!";
+  }
+
+  const lastLog = logs[0];
+  const recentLogs = logs.slice(0, 5); // Use last 5 logs for context
+
+  const workoutLogText = `
+    Type: ${lastLog.workoutType}
+    Exercises: ${lastLog.exercises.map(ex => `${ex.name} - ${ex.sets} sets of ${ex.reps}`).join(', ')}
+    Difficulty: ${lastLog.difficultyRating}/10
+    Fatigue: ${lastLog.fatigue}, Soreness: ${lastLog.soreness}, Mood: ${lastLog.mood}, Energy: ${lastLog.energy}
+  `;
+
+  const previousWeekSummaryText = recentLogs.map(log => 
+    `Date: ${new Date(log.date).toLocaleDateString()}, Type: ${log.workoutType}, Difficulty: ${log.difficultyRating}/10`
+  ).join('\n');
+
+  try {
+    const input: TrainingSuggestionsInput = {
+      workoutLog: workoutLogText,
+      userNotes: lastLog.notes || 'No notes provided.',
+      previousWeekSummary: previousWeekSummaryText
+    };
+    const result = await getTrainingSuggestions(input);
+    return result.suggestions;
+  } catch (error) {
+    console.error("Error getting AI suggestion:", error);
+    return "Could not generate a goal. Try again later.";
+  }
+}
+
+
+export default async function DashboardPage() {
+  const user = await getCurrentUser();
+  if (!user) {
+    redirect('/login');
+  }
+
+  const workoutLogs = await getWorkoutLogs(user.uid);
+  const streak = calculateStreak(workoutLogs);
+  const nextGoal = await getNextGoalSuggestion(workoutLogs);
+  const workoutsThisWeek = workoutLogs.filter(log => differenceInCalendarDays(new Date(), new Date(log.date)) <= 7).length;
+
+
   const quickStats = [
-    { title: "Workouts This Week", value: "3", icon: Dumbbell, color: "text-primary" },
-    { title: "Active Streak", value: "12 days", icon: Activity, color: "text-green-500" },
-    { title: "Next Goal", value: "15 Pike Pushups", icon: Target, color: "text-accent" },
+    { title: "Workouts This Week", value: workoutsThisWeek.toString(), icon: Dumbbell, color: "text-primary" },
+    { title: "Active Streak", value: `${streak} days`, icon: Activity, color: "text-green-500" },
+    { title: "Next Goal Focus", value: "AI Suggestion", icon: Target, color: "text-accent" },
   ];
 
   return (
     <div className="container mx-auto py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground font-headline">Welcome back, {userName}!</h1>
+        <h1 className="text-3xl font-bold text-foreground font-headline">Welcome back!</h1>
         <p className="text-muted-foreground">Here&apos;s your progress overview and quick actions.</p>
       </div>
 
@@ -81,7 +156,7 @@ export default function DashboardPage() {
              <div className="mt-4 p-4 bg-muted/50 rounded-md">
                 <p className="text-sm text-foreground">
                   <Lightbulb className="inline-block mr-2 h-4 w-4 text-accent" />
-                  "Based on your recent fatigue levels, consider a mobility day tomorrow. You've hit 5 push sessions this week!"
+                  &quot;{nextGoal}&quot;
                 </p>
              </div>
           </CardContent>
@@ -96,12 +171,12 @@ export default function DashboardPage() {
       <Card className="mt-8">
         <CardHeader>
           <CardTitle className="font-headline">Recent Workout Summary</CardTitle>
-          <CardDescription>AI-generated insights from your last session.</CardDescription>
+          <CardDescription>AI-generated insights from your last session. (Summaries appear after logging a workout).</CardDescription>
         </CardHeader>
         <CardContent>
           {/* This section will be populated by AI summary after workout logging */}
           <div id="workout-summary-display" className="p-4 bg-card-foreground/5 rounded-md min-h-[100px]">
-            <p className="text-muted-foreground italic">Your latest workout summary will appear here after you log a session.</p>
+            <p className="text-muted-foreground italic">Your latest workout summary will appear on the results screen after you log a workout. This dashboard shows your stats and goals.</p>
           </div>
         </CardContent>
       </Card>
