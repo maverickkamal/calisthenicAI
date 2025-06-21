@@ -24,10 +24,6 @@ const requiredEnvVars: (keyof typeof firebaseConfigValues)[] = [
 
 for (const key of requiredEnvVars) {
   if (!firebaseConfigValues[key]) {
-    const envVarName = `NEXT_PUBLIC_FIREBASE_${key.replace(/([A-Z])/g, '_$1').toUpperCase()}`;
-    // Correcting the envVarName for apiKey specifically if it doesn't follow the general pattern for others.
-    // For example, if it's NEXT_PUBLIC_FIREBASE_API_KEY not NEXT_PUBLIC_FIREBASE_API_KEY_KEY
-    // Assuming the pattern from process.env.NEXT_PUBLIC_FIREBASE_API_KEY is standard:
     const specificEnvName = `NEXT_PUBLIC_FIREBASE_${key === 'apiKey' ? 'API_KEY' : key.replace(/([A-Z])/g, '_$1').toUpperCase().replace(/^_/, '')}`;
     
     throw new Error(
@@ -37,6 +33,11 @@ for (const key of requiredEnvVars) {
     );
   }
 }
+
+// Log the configuration being used to help with debugging.
+// This will appear in the server-side console.
+console.log("Firebase Config Used:", firebaseConfigValues);
+
 
 let app: FirebaseApp;
 if (!getApps().length) {
