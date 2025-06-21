@@ -34,11 +34,6 @@ for (const key of requiredEnvVars) {
   }
 }
 
-// Log the configuration being used to help with debugging.
-// This will appear in the server-side console.
-console.log("Firebase Config Used:", firebaseConfigValues);
-
-
 let app: FirebaseApp;
 if (!getApps().length) {
   app = initializeApp(firebaseConfigValues);
