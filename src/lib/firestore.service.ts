@@ -3,6 +3,8 @@ import { db } from './firebase';
 import { collection, addDoc, getDocs, query, where, orderBy, serverTimestamp, Timestamp, limit } from 'firebase/firestore';
 import type { WorkoutLog, TrainingPlan } from './types';
 
+const firestoreNotFoundError = "Firestore Database Not Found: Please go to your Firebase project console, navigate to 'Firestore Database', and click 'Create database'. IMPORTANT: Ensure you select 'Native Mode' (not Datastore mode) and start in 'Test Mode' for development.";
+
 // ==== WORKOUT LOGS ====
 
 /**
@@ -19,8 +21,11 @@ export async function addWorkoutLog(userId: string, workoutData: Omit<WorkoutLog
     };
     const docRef = await addDoc(collection(db, `users/${userId}/workoutLogs`), logDataWithTimestamp);
     return docRef.id;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error adding workout log to Firestore:", error);
+    if (error.code === 'not-found') {
+        throw new Error(firestoreNotFoundError);
+    }
     throw new Error("Could not save workout log.");
   }
 }
@@ -45,8 +50,11 @@ export async function getWorkoutLogs(userId: string): Promise<WorkoutLog[]> {
         date: (data.date as Timestamp).toDate().toISOString(),
       } as unknown as WorkoutLog;
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching workout logs from Firestore:", error);
+    if (error.code === 'not-found') {
+        throw new Error(firestoreNotFoundError);
+    }
     return [];
   }
 }
@@ -68,8 +76,11 @@ export async function addTrainingPlan(userId: string, planData: Omit<TrainingPla
         };
         const docRef = await addDoc(collection(db, `users/${userId}/trainingPlans`), planWithTimestamp);
         return docRef.id;
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error adding training plan to Firestore:", error);
+        if (error.code === 'not-found') {
+            throw new Error(firestoreNotFoundError);
+        }
         throw new Error("Could not save training plan.");
     }
 }
@@ -93,8 +104,11 @@ export async function getTrainingPlans(userId: string): Promise<TrainingPlan[]> 
                 createdAt: (data.createdAt as Timestamp).toDate().toISOString(),
             } as unknown as TrainingPlan;
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error fetching training plans from Firestore:", error);
+         if (error.code === 'not-found') {
+            throw new Error(firestoreNotFoundError);
+        }
         return [];
     }
 }
