@@ -22,10 +22,11 @@ export async function addWorkoutLog(userId: string, workoutData: Omit<WorkoutLog
     const docRef = await addDoc(collection(db, `users/${userId}/workoutLogs`), logDataWithTimestamp);
     return docRef.id;
   } catch (error: any) {
-    console.error("Error adding workout log to Firestore:", error);
     if (error.code === 'not-found') {
-        throw new Error(firestoreNotFoundError);
+        console.error(`\n\n[CalisthenicsAI] FIRESTORE CONFIG ERROR: ${firestoreNotFoundError}\n\n`);
+        throw new Error("Firestore Database not found. Check server logs for setup instructions.");
     }
+    console.error("Error adding workout log to Firestore:", error);
     throw new Error("Could not save workout log.");
   }
 }
@@ -51,9 +52,10 @@ export async function getWorkoutLogs(userId: string): Promise<WorkoutLog[]> {
       } as unknown as WorkoutLog;
     });
   } catch (error: any) {
-    console.error("Error fetching workout logs from Firestore:", error);
     if (error.code === 'not-found') {
-        throw new Error(firestoreNotFoundError);
+        console.error(`\n\n[CalisthenicsAI] FIRESTORE CONFIG ERROR: ${firestoreNotFoundError}\n\n`);
+    } else {
+        console.error("Error fetching workout logs from Firestore:", error);
     }
     return [];
   }
@@ -77,10 +79,11 @@ export async function addTrainingPlan(userId: string, planData: Omit<TrainingPla
         const docRef = await addDoc(collection(db, `users/${userId}/trainingPlans`), planWithTimestamp);
         return docRef.id;
     } catch (error: any) {
-        console.error("Error adding training plan to Firestore:", error);
         if (error.code === 'not-found') {
-            throw new Error(firestoreNotFoundError);
+            console.error(`\n\n[CalisthenicsAI] FIRESTORE CONFIG ERROR: ${firestoreNotFoundError}\n\n`);
+            throw new Error("Firestore Database not found. Check server logs for setup instructions.");
         }
+        console.error("Error adding training plan to Firestore:", error);
         throw new Error("Could not save training plan.");
     }
 }
@@ -105,9 +108,10 @@ export async function getTrainingPlans(userId: string): Promise<TrainingPlan[]> 
             } as unknown as TrainingPlan;
         });
     } catch (error: any) {
-        console.error("Error fetching training plans from Firestore:", error);
-         if (error.code === 'not-found') {
-            throw new Error(firestoreNotFoundError);
+        if (error.code === 'not-found') {
+            console.error(`\n\n[CalisthenicsAI] FIRESTORE CONFIG ERROR: ${firestoreNotFoundError}\n\n`);
+        } else {
+            console.error("Error fetching training plans from Firestore:", error);
         }
         return [];
     }
