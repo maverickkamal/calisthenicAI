@@ -112,8 +112,10 @@ export default async function DashboardPage() {
   
   if (firestoreError === 'not-found') {
     return (
-      <div className="container mx-auto py-8">
-        <FirestoreErrorWarning />
+      <div className="container mx-auto flex h-[calc(100vh-10rem)] items-center justify-center">
+        <div className="w-full max-w-2xl">
+          <FirestoreErrorWarning />
+        </div>
       </div>
     );
   }

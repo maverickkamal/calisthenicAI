@@ -46,14 +46,22 @@ export default async function TrainingPlanPage() {
 
   const { data: plans, error: firestoreError } = await getTrainingPlans(user.uid);
 
+  if (firestoreError === 'not-found') {
+    return (
+      <div className="container mx-auto flex h-[calc(100vh-10rem)] items-center justify-center">
+        <div className="w-full max-w-2xl">
+          <FirestoreErrorWarning />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto py-8 space-y-8">
       <div>
         <h1 className="text-3xl font-bold font-headline">My Training Plans</h1>
         <p className="text-muted-foreground">Create, view, and manage your custom workout plans.</p>
       </div>
-      
-      {firestoreError === 'not-found' && <FirestoreErrorWarning />}
       
       <TrainingPlanForm />
       
