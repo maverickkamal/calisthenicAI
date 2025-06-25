@@ -5,6 +5,7 @@
 import { useActionState, useEffect } from "react";
 import { useFormStatus } from "react-dom";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { signup, type SignupFormState } from "@/actions/auth.actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,13 +26,14 @@ function SubmitButton() {
 export function SignupForm() {
   const initialState: SignupFormState = { message: null, errors: {}, success: false };
   const [state, dispatch] = useActionState(signup, initialState);
+  const router = useRouter();
 
   useEffect(() => {
     if (state?.success) {
-      // Redirect on success. Using replace to avoid signup page in browser history.
-      window.location.replace('/dashboard');
+      // Use router.replace for client-side navigation
+      router.replace('/dashboard');
     }
-  }, [state]);
+  }, [state, router]);
 
 
   return (
