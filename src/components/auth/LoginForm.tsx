@@ -1,7 +1,8 @@
+
 // src/components/auth/LoginForm.tsx
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { useFormStatus } from "react-dom";
 import Link from "next/link";
 import { login, type LoginFormState } from "@/actions/auth.actions";
@@ -22,8 +23,16 @@ function SubmitButton() {
 }
 
 export function LoginForm() {
-  const initialState: LoginFormState = { message: null, errors: {} };
+  const initialState: LoginFormState = { message: null, errors: {}, success: false };
   const [state, dispatch] = useActionState(login, initialState);
+
+  useEffect(() => {
+    if (state?.success) {
+      // Redirect on success. Using replace to avoid login page in browser history.
+      window.location.replace('/dashboard');
+    }
+  }, [state]);
+
 
   return (
     <Card>

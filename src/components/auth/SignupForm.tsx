@@ -1,7 +1,8 @@
+
 // src/components/auth/SignupForm.tsx
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { useFormStatus } from "react-dom";
 import Link from "next/link";
 import { signup, type SignupFormState } from "@/actions/auth.actions";
@@ -24,6 +25,14 @@ function SubmitButton() {
 export function SignupForm() {
   const initialState: SignupFormState = { message: null, errors: {}, success: false };
   const [state, dispatch] = useActionState(signup, initialState);
+
+  useEffect(() => {
+    if (state?.success) {
+      // Redirect on success. Using replace to avoid signup page in browser history.
+      window.location.replace('/dashboard');
+    }
+  }, [state]);
+
 
   return (
     <Card>

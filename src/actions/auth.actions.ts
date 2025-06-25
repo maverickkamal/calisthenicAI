@@ -29,6 +29,7 @@ export type LoginFormState = {
     form?: string[];
   };
   message?: string | null;
+  success?: boolean;
 };
 
 export async function login(prevState: LoginFormState | undefined, formData: FormData): Promise<LoginFormState> {
@@ -38,6 +39,7 @@ export async function login(prevState: LoginFormState | undefined, formData: For
     return {
       errors: validatedFields.error.flatten().fieldErrors,
       message: "Invalid fields. Login failed.",
+      success: false,
     };
   }
 
@@ -57,7 +59,7 @@ export async function login(prevState: LoginFormState | undefined, formData: For
     let errorMessage = "Login failed. Please try again.";
     if (error.code) {
       switch (error.code) {
-        case 'auth/invalid-credential': // Catches user-not-found and wrong-password
+        case 'auth/invalid-credential':
           errorMessage = "Invalid email or password.";
           break;
         case 'auth/user-disabled':
@@ -78,9 +80,10 @@ export async function login(prevState: LoginFormState | undefined, formData: For
     return {
       errors: { form: [errorMessage] },
       message: "Login failed.",
+      success: false,
     };
   }
-  redirect('/dashboard');
+  return { success: true, message: 'Login successful!' };
 }
 
 
@@ -158,7 +161,7 @@ export async function signup(prevState: SignupFormState | undefined, formData: F
     };
   }
   
-  redirect('/dashboard');
+  return { success: true, message: 'Account created successfully!' };
 }
 
 export async function logout() {
