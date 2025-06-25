@@ -2,10 +2,9 @@
 // src/components/auth/SignupForm.tsx
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { signup, type SignupFormState } from "@/actions/auth.actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,17 +23,8 @@ function SubmitButton() {
 }
 
 export function SignupForm() {
-  const initialState: SignupFormState = { message: null, errors: {}, success: false };
+  const initialState: SignupFormState = { message: null, errors: {} };
   const [state, dispatch] = useActionState(signup, initialState);
-  const router = useRouter();
-
-  useEffect(() => {
-    if (state?.success) {
-      // Use router.replace for client-side navigation
-      router.replace('/dashboard');
-    }
-  }, [state, router]);
-
 
   return (
     <Card>
@@ -99,14 +89,6 @@ export function SignupForm() {
               <AlertTitle>Signup Error</AlertTitle>
               <AlertDescription>
                 {state.errors.form.join(", ")}
-              </AlertDescription>
-            </Alert>
-          )}
-          {state?.message && state.success && (
-            <Alert variant="default">
-              <AlertTitle>Success!</AlertTitle>
-              <AlertDescription>
-                {state.message}
               </AlertDescription>
             </Alert>
           )}

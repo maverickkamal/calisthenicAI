@@ -29,7 +29,6 @@ export type LoginFormState = {
     form?: string[];
   };
   message?: string | null;
-  success?: boolean;
 };
 
 export async function login(prevState: LoginFormState | undefined, formData: FormData): Promise<LoginFormState> {
@@ -39,7 +38,6 @@ export async function login(prevState: LoginFormState | undefined, formData: For
     return {
       errors: validatedFields.error.flatten().fieldErrors,
       message: "Invalid fields. Login failed.",
-      success: false,
     };
   }
 
@@ -80,10 +78,10 @@ export async function login(prevState: LoginFormState | undefined, formData: For
     return {
       errors: { form: [errorMessage] },
       message: "Login failed.",
-      success: false,
     };
   }
-  return { success: true, message: 'Login successful!' };
+  
+  redirect('/dashboard');
 }
 
 
@@ -95,7 +93,6 @@ export type SignupFormState = {
     form?: string[];
   };
   message?: string | null;
-  success?: boolean;
 };
 
 export async function signup(prevState: SignupFormState | undefined, formData: FormData): Promise<SignupFormState> {
@@ -105,7 +102,6 @@ export async function signup(prevState: SignupFormState | undefined, formData: F
     return {
       errors: validatedFields.error.flatten().fieldErrors,
       message: "Invalid fields. Signup failed.",
-      success: false,
     };
   }
 
@@ -157,11 +153,10 @@ export async function signup(prevState: SignupFormState | undefined, formData: F
      return {
       errors: { form: [specificErrorMessage] },
       message: "Signup failed.",
-      success: false,
     };
   }
   
-  return { success: true, message: 'Account created successfully!' };
+  redirect('/dashboard');
 }
 
 export async function logout() {
