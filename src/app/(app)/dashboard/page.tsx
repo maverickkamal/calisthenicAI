@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Activity, Dumbbell, Lightbulb, Target } from 'lucide-react';
+import { Activity, Dumbbell, Lightbulb, Target, AlertTriangle } from 'lucide-react';
 import Image from 'next/image';
 import { getCurrentUser } from '@/lib/auth';
 import { getWorkoutLogs } from '@/lib/firestore.service';
@@ -11,6 +11,7 @@ import type { WorkoutLog } from '@/lib/types';
 import { getTrainingSuggestions, type TrainingSuggestionsInput } from '@/ai/flows/memory-context-flow';
 import { differenceInCalendarDays, isToday, isYesterday } from 'date-fns';
 import { redirect } from 'next/navigation';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 export const metadata: Metadata = {
   title: 'Dashboard - CalisthenicsAI',
@@ -76,6 +77,27 @@ async function getNextGoalSuggestion(logs: WorkoutLog[]): Promise<string> {
   }
 }
 
+function FirestoreErrorWarning() {
+  return (
+    <Alert variant="destructive" className="mb-8">
+      <AlertTriangle className="h-4 w-4" />
+      <AlertTitle>Action Required: Firestore Database Not Configured</AlertTitle>
+      <AlertDescription>
+        <p className="mb-2">The app cannot connect to the database. This is usually because Firestore has not been created or is in the wrong mode.</p>
+        <p className="font-semibold">Please follow these steps:</p>
+        <ol className="list-decimal list-inside space-y-1 mt-2">
+          <li>Go to your Firebase Project Console.</li>
+          <li>In the left sidebar, under "Build", click **Firestore Database**.</li>
+          <li>Click the **"Create database"** button.</li>
+          <li>**IMPORTANT:** When prompted, select **"Native Mode"**, not "Datastore mode".</li>
+          <li>For security rules, choose **"Start in test mode"** for now.</li>
+          <li>If a database already exists, verify it is in **Native Mode**.</li>
+        </ol>
+      </AlertDescription>
+    </Alert>
+  );
+}
+
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
@@ -83,7 +105,29 @@ export default async function DashboardPage() {
     redirect('/login');
   }
 
-  const workoutLogs = await getWorkoutLogs(user.uid);
+  const { data: workoutLogs, error: firestoreError } = await getWorkoutLogs(user.uid);
+  
+  if (firestoreError === 'not-found') {
+    return (
+      <div className="container mx-auto py-8">
+        <FirestoreErrorWarning />
+      </div>
+    );
+  }
+  
+  if (firestoreError) {
+     return (
+      <div className="container mx-auto py-8">
+         <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>An Unexpected Error Occurred</AlertTitle>
+            <AlertDescription>Could not load dashboard data due to a database connection error. Please try again later.</AlertDescription>
+         </Alert>
+      </div>
+    );
+  }
+
+
   const streak = calculateStreak(workoutLogs);
   const nextGoal = await getNextGoalSuggestion(workoutLogs);
   const workoutsThisWeek = workoutLogs.filter(log => differenceInCalendarDays(new Date(), new Date(log.date)) <= 7).length;

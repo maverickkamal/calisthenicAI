@@ -24,7 +24,7 @@ export async function addWorkoutLog(userId: string, workoutData: Omit<WorkoutLog
   } catch (error: any) {
     if (error.code === 'not-found') {
         console.error(`\n\n[CalisthenicsAI] FIRESTORE CONFIG ERROR: ${firestoreNotFoundError}\n\n`);
-        throw new Error("Firestore Database not found. Check server logs for setup instructions.");
+        throw new Error("Firestore Database not found. Check server logs for setup instructions. Ensure it is in Native Mode.");
     }
     console.error("Error adding workout log to Firestore:", error);
     throw new Error("Could not save workout log.");
@@ -34,30 +34,31 @@ export async function addWorkoutLog(userId: string, workoutData: Omit<WorkoutLog
 /**
  * Fetches all workout logs for a user, sorted by date descending.
  * @param userId The ID of the user.
- * @returns A promise that resolves to an array of workout logs.
+ * @returns A promise that resolves to an object with workout logs and a potential error key.
  */
-export async function getWorkoutLogs(userId: string): Promise<WorkoutLog[]> {
+export async function getWorkoutLogs(userId: string): Promise<{ data: WorkoutLog[]; error: string | null; }> {
   try {
     const logsCollection = collection(db, `users/${userId}/workoutLogs`);
     const q = query(logsCollection, orderBy('date', 'desc'));
     const querySnapshot = await getDocs(q);
     
-    return querySnapshot.docs.map(doc => {
-      const data = doc.data();
+    const data = querySnapshot.docs.map(doc => {
+      const docData = doc.data();
       return {
         id: doc.id,
-        ...data,
+        ...docData,
         // Convert Firestore Timestamp to a serializable format (ISO string)
-        date: (data.date as Timestamp).toDate().toISOString(),
+        date: (docData.date as Timestamp).toDate().toISOString(),
       } as unknown as WorkoutLog;
     });
+    return { data, error: null };
   } catch (error: any) {
     if (error.code === 'not-found') {
         console.error(`\n\n[CalisthenicsAI] FIRESTORE CONFIG ERROR: ${firestoreNotFoundError}\n\n`);
-    } else {
-        console.error("Error fetching workout logs from Firestore:", error);
+        return { data: [], error: 'not-found' };
     }
-    return [];
+    console.error("Error fetching workout logs from Firestore:", error);
+    return { data: [], error: 'unknown' };
   }
 }
 
@@ -81,7 +82,7 @@ export async function addTrainingPlan(userId: string, planData: Omit<TrainingPla
     } catch (error: any) {
         if (error.code === 'not-found') {
             console.error(`\n\n[CalisthenicsAI] FIRESTORE CONFIG ERROR: ${firestoreNotFoundError}\n\n`);
-            throw new Error("Firestore Database not found. Check server logs for setup instructions.");
+            throw new Error("Firestore Database not found. Check server logs for setup instructions. Ensure it is in Native Mode.");
         }
         console.error("Error adding training plan to Firestore:", error);
         throw new Error("Could not save training plan.");
@@ -91,28 +92,29 @@ export async function addTrainingPlan(userId: string, planData: Omit<TrainingPla
 /**
  * Fetches all training plans for a user.
  * @param userId The ID of the user.
- * @returns A promise that resolves to an array of training plans.
+ * @returns A promise that resolves to an object with training plans and a potential error key.
  */
-export async function getTrainingPlans(userId: string): Promise<TrainingPlan[]> {
+export async function getTrainingPlans(userId: string): Promise<{ data: TrainingPlan[]; error: string | null; }> {
     try {
         const plansCollection = collection(db, `users/${userId}/trainingPlans`);
         const q = query(plansCollection, orderBy('createdAt', 'desc'));
         const querySnapshot = await getDocs(q);
 
-        return querySnapshot.docs.map(doc => {
-            const data = doc.data();
+        const data = querySnapshot.docs.map(doc => {
+            const docData = doc.data();
             return {
                 id: doc.id,
-                ...data,
-                createdAt: (data.createdAt as Timestamp).toDate().toISOString(),
+                ...docData,
+                createdAt: (docData.createdAt as Timestamp).toDate().toISOString(),
             } as unknown as TrainingPlan;
         });
+        return { data, error: null };
     } catch (error: any) {
         if (error.code === 'not-found') {
             console.error(`\n\n[CalisthenicsAI] FIRESTORE CONFIG ERROR: ${firestoreNotFoundError}\n\n`);
-        } else {
-            console.error("Error fetching training plans from Firestore:", error);
+            return { data: [], error: 'not-found' };
         }
-        return [];
+        console.error("Error fetching training plans from Firestore:", error);
+        return { data: [], error: 'unknown' };
     }
 }
