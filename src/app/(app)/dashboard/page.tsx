@@ -78,33 +78,37 @@ async function getNextGoalSuggestion(logs: WorkoutLog[]): Promise<string> {
 }
 
 function FirestoreErrorWarning() {
+  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
   return (
     <Alert variant="destructive" className="mb-8">
       <AlertTriangle className="h-4 w-4" />
       <AlertTitle className="text-xl font-bold">DATABASE CONNECTION FAILED</AlertTitle>
       <AlertDescription>
         <p className="mt-2 mb-4 text-base">
-          This is a **Firebase project configuration issue**, not a bug in the code. Your app cannot find the Firestore database.
+          The application is configured to connect to the Firebase project with the ID:
+        </p>
+        <div className="my-4 p-3 bg-foreground/10 rounded-md text-center">
+          <p className="text-lg font-mono font-bold text-destructive">{projectId || "PROJECT ID NOT FOUND IN .env"}</p>
+        </div>
+        <p className="mt-2 mb-4 text-base">
+           The error `5 NOT_FOUND` combined with **zero usage reported in your Firebase console** almost certainly means this Project ID is incorrect, or the database was not created in <strong className="text-destructive">Native Mode</strong>.
         </p>
         <p className="font-bold text-lg my-2">To fix this, please do the following:</p>
         <ol className="list-decimal list-inside space-y-3 text-base">
           <li>
-            Go to your <strong className="text-destructive">Firebase Project Console</strong>.
-          </li>
-          <li>
-            In the sidebar, click <strong className="text-destructive">Firestore Database</strong>.
-          </li>
-          <li>
-            If you see a "Create database" button, click it.
-          </li>
-          <li>
-            <strong className="text-destructive uppercase">CRITICAL STEP:</strong> You MUST select <strong className="text-destructive">"Native Mode"</strong> for the database. If you select "Datastore mode", the app will not work.
-          </li>
-          <li>
-            If a database already exists, <strong className="text-destructive">DELETE IT</strong> and create a new one to ensure it is in <strong className="text-destructive">Native Mode</strong>.
+            Go to your <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="underline font-bold text-destructive">Firebase Project Settings</a> and find your **Project ID**.
           </li>
            <li>
-            Finally, double-check that the `NEXT_PUBLIC_FIREBASE_PROJECT_ID` in your `.env` file matches your actual Firebase Project ID.
+            Confirm that the Project ID shown above matches the one in your Firebase Console. If it does not, correct the `NEXT_PUBLIC_FIREBASE_PROJECT_ID` value in your `.env` file.
+          </li>
+          <li>
+            In the Firebase Console, click <strong className="text-destructive">Firestore Database</strong> in the sidebar.
+          </li>
+          <li>
+            <strong className="text-destructive uppercase">CRITICAL STEP:</strong> You MUST have a database in <strong className="text-destructive">"Native Mode"</strong>. If it says "Datastore Mode", it will not work.
+          </li>
+          <li>
+            If your database is in the wrong mode, you must <strong className="text-destructive">DELETE IT</strong> and create a new one, making sure to select **Native Mode**.
           </li>
         </ol>
       </AlertDescription>
