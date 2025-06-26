@@ -1,22 +1,19 @@
 // src/app/(app)/dashboard/page.tsx
-import type { Metadata } from 'next';
+"use client";
+
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Activity, Dumbbell, Lightbulb, Target, AlertTriangle } from 'lucide-react';
+import { Activity, Dumbbell, Lightbulb, Target, AlertTriangle, LoaderCircle } from 'lucide-react';
 import Image from 'next/image';
-import { getCurrentUser } from '@/lib/auth';
 import { getWorkoutLogs } from '@/lib/firestore.service';
 import type { WorkoutLog } from '@/lib/types';
 import { getTrainingSuggestions, type TrainingSuggestionsInput } from '@/ai/flows/memory-context-flow';
 import { differenceInCalendarDays, isToday, isYesterday } from 'date-fns';
-import { redirect } from 'next/navigation';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-
-export const metadata: Metadata = {
-  title: 'Dashboard - CalisthenicsAI',
-  description: 'Your CalisthenicsAI dashboard.',
-};
+import { auth } from '@/lib/firebase';
+import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 
 function calculateStreak(logs: WorkoutLog[]): number {
   if (logs.length === 0) {
@@ -44,38 +41,6 @@ function calculateStreak(logs: WorkoutLog[]): number {
   return streak;
 }
 
-async function getNextGoalSuggestion(logs: WorkoutLog[]): Promise<string> {
-  if (logs.length === 0) {
-    return "Log your first workout to get a personalized goal!";
-  }
-
-  const lastLog = logs[0];
-  const recentLogs = logs.slice(0, 5); // Use last 5 logs for context
-
-  const workoutLogText = `
-    Type: ${lastLog.workoutType}
-    Exercises: ${lastLog.exercises.map(ex => `${ex.name} - ${ex.sets} sets of ${ex.reps}`).join(', ')}
-    Difficulty: ${lastLog.difficultyRating}/10
-    Fatigue: ${lastLog.fatigue}, Soreness: ${lastLog.soreness}, Mood: ${lastLog.mood}, Energy: ${lastLog.energy}
-  `;
-
-  const previousWeekSummaryText = recentLogs.map(log => 
-    `Date: ${new Date(log.date).toLocaleDateString()}, Type: ${log.workoutType}, Difficulty: ${log.difficultyRating}/10`
-  ).join('\n');
-
-  try {
-    const input: TrainingSuggestionsInput = {
-      workoutLog: workoutLogText,
-      userNotes: lastLog.notes || 'No notes provided.',
-      previousWeekSummary: previousWeekSummaryText
-    };
-    const result = await getTrainingSuggestions(input);
-    return result.suggestions;
-  } catch (error) {
-    console.error("Error getting AI suggestion:", error);
-    return "Could not generate a goal. Try again later.";
-  }
-}
 
 function FirestoreErrorWarning() {
   const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
@@ -105,47 +70,120 @@ function FirestoreErrorWarning() {
 }
 
 
-export default async function DashboardPage() {
-  const user = await getCurrentUser();
-  if (!user) {
-    redirect('/login');
-  }
+export default function DashboardPage() {
+    const [user, setUser] = useState<FirebaseUser | null>(null);
+    const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([]);
+    const [nextGoal, setNextGoal] = useState<string>('Log your first workout to get a personalized goal!');
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [isGoalLoading, setIsGoalLoading] = useState(false);
 
-  const { data: workoutLogs, error: firestoreError } = await getWorkoutLogs(user.uid);
-  
-  if (firestoreError === 'not-found') {
-    return (
-      <div className="container mx-auto flex h-[calc(100vh-10rem)] items-center justify-center">
-        <div className="w-full max-w-2xl">
-          <FirestoreErrorWarning />
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+            if (currentUser) {
+                setUser(currentUser);
+                const { data, error: firestoreError } = await getWorkoutLogs(currentUser.uid);
+                
+                setIsLoading(false);
+
+                if (firestoreError) {
+                    setError(firestoreError); // This will be 'not-found' or 'unknown'
+                } else {
+                    setWorkoutLogs(data);
+                }
+            } else {
+                // Should be handled by middleware, which redirects to /login
+                setIsLoading(false);
+                setUser(null);
+            }
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    useEffect(() => {
+      if (workoutLogs.length > 0) {
+        setIsGoalLoading(true);
+        const lastLog = workoutLogs[0];
+        const recentLogs = workoutLogs.slice(0, 5);
+
+        const workoutLogText = `
+            Type: ${lastLog.workoutType}
+            Exercises: ${lastLog.exercises.map(ex => `${ex.name} - ${ex.sets} sets of ${ex.reps}`).join(', ')}
+            Difficulty: ${lastLog.difficultyRating}/10
+            Fatigue: ${lastLog.fatigue}, Soreness: ${lastLog.soreness}, Mood: ${lastLog.mood}, Energy: ${lastLog.energy}
+        `;
+
+        const previousWeekSummaryText = recentLogs.map(log => 
+            `Date: ${new Date(log.date).toLocaleDateString()}, Type: ${log.workoutType}, Difficulty: ${log.difficultyRating}/10`
+        ).join('\n');
+
+        const input: TrainingSuggestionsInput = {
+            workoutLog: workoutLogText,
+            userNotes: lastLog.notes || 'No notes provided.',
+            previousWeekSummary: previousWeekSummaryText
+        };
+
+        getTrainingSuggestions(input)
+          .then(result => setNextGoal(result.suggestions))
+          .catch(err => {
+            console.error("Error getting AI suggestion:", err);
+            setNextGoal("Could not generate a goal. Try again later.");
+          })
+          .finally(() => setIsGoalLoading(false));
+      }
+    }, [workoutLogs]);
+
+    if (isLoading) {
+        return (
+          <div className="container mx-auto flex h-[calc(100vh-10rem)] items-center justify-center">
+            <div className="flex flex-col items-center gap-4">
+              <LoaderCircle className="h-12 w-12 animate-spin text-primary" />
+              <p className="text-muted-foreground">Loading Your Dashboard...</p>
+            </div>
+          </div>
+        );
+    }
+    
+    if (error === 'not-found') {
+        return (
+          <div className="container mx-auto flex h-[calc(100vh-10rem)] items-center justify-center">
+            <div className="w-full max-w-2xl">
+              <FirestoreErrorWarning />
+            </div>
+          </div>
+        );
+    }
+
+    if (error) {
+        return (
+          <div className="container mx-auto py-8">
+             <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>An Unexpected Error Occurred</AlertTitle>
+                <AlertDescription>Could not load dashboard data. Please try refreshing the page.</AlertDescription>
+             </Alert>
+          </div>
+        );
+    }
+
+    if (!user) {
+      return (
+        <div className="container mx-auto flex h-[calc(100vh-10rem)] items-center justify-center">
+           <p>Redirecting to login...</p>
         </div>
-      </div>
-    );
-  }
-  
-  if (firestoreError) {
-     return (
-      <div className="container mx-auto py-8">
-         <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>An Unexpected Error Occurred</AlertTitle>
-            <AlertDescription>Could not load dashboard data due to a database connection error. Please try again later.</AlertDescription>
-         </Alert>
-      </div>
-    );
-  }
+      );
+    }
+    
+    const streak = calculateStreak(workoutLogs);
+    const workoutsThisWeek = workoutLogs.filter(log => differenceInCalendarDays(new Date(), new Date(log.date)) <= 7).length;
 
-
-  const streak = calculateStreak(workoutLogs);
-  const nextGoal = await getNextGoalSuggestion(workoutLogs);
-  const workoutsThisWeek = workoutLogs.filter(log => differenceInCalendarDays(new Date(), new Date(log.date)) <= 7).length;
-
-
-  const quickStats = [
-    { title: "Workouts This Week", value: workoutsThisWeek.toString(), icon: Dumbbell, color: "text-primary" },
-    { title: "Active Streak", value: `${streak} days`, icon: Activity, color: "text-green-500" },
-    { title: "Next Goal Focus", value: "AI Suggestion", icon: Target, color: "text-accent" },
-  ];
+    const quickStats = [
+      { title: "Workouts This Week", value: workoutsThisWeek.toString(), icon: Dumbbell, color: "text-primary" },
+      { title: "Active Streak", value: `${streak} days`, icon: Activity, color: "text-green-500" },
+      { title: "Next Goal Focus", value: "AI Suggestion", icon: Target, color: "text-accent" },
+    ];
 
   return (
     <div className="container mx-auto py-8">
@@ -206,10 +244,17 @@ export default async function DashboardPage() {
               data-ai-hint="artificial intelligence brain"
             />
              <div className="mt-4 p-4 bg-muted/50 rounded-md">
-                <p className="text-sm text-foreground">
-                  <Lightbulb className="inline-block mr-2 h-4 w-4 text-accent" />
-                  &quot;{nextGoal}&quot;
-                </p>
+                {isGoalLoading ? (
+                  <div className="flex items-center gap-2">
+                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                    <span className="text-sm text-muted-foreground">Generating goal...</span>
+                  </div>
+                ) : (
+                  <p className="text-sm text-foreground">
+                    <Lightbulb className="inline-block mr-2 h-4 w-4 text-accent" />
+                    &quot;{nextGoal}&quot;
+                  </p>
+                )}
              </div>
           </CardContent>
            <CardFooter>
