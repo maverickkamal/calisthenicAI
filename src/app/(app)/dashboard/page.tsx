@@ -204,11 +204,11 @@ export default function DashboardPage() {
           <CardContent className="flex-grow">
             <Image 
               src="https://placehold.co/600x400.png" 
-              alt="Man doing pushups" 
+              alt="Man doing a backflip" 
               width={600} 
               height={400} 
               className="rounded-md object-cover aspect-video"
-              data-ai-hint="calisthenics workout" 
+              data-ai-hint="back flip" 
             />
           </CardContent>
           <CardFooter>
