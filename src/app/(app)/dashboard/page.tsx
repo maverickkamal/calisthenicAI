@@ -81,20 +81,31 @@ function FirestoreErrorWarning() {
   return (
     <Alert variant="destructive" className="mb-8">
       <AlertTriangle className="h-4 w-4" />
-      <AlertTitle>Action Required: Cannot Connect to Database</AlertTitle>
+      <AlertTitle className="text-xl font-bold">DATABASE CONNECTION FAILED</AlertTitle>
       <AlertDescription>
-        <p className="mb-2">Your app cannot find the Firestore database. This is a configuration issue in your Firebase project, not a code bug.</p>
-        <p className="font-bold text-lg my-2">Please follow these steps exactly:</p>
-        <ol className="list-decimal list-inside space-y-2">
-          <li>Go to your Firebase Project Console.</li>
-          <li>In the left sidebar (under Build), click **Firestore Database**.</li>
-          <li>Click the **"Create database"** button.</li>
+        <p className="mt-2 mb-4 text-base">
+          This is a **Firebase project configuration issue**, not a bug in the code. Your app cannot find the Firestore database.
+        </p>
+        <p className="font-bold text-lg my-2">To fix this, please do the following:</p>
+        <ol className="list-decimal list-inside space-y-3 text-base">
           <li>
-            <span className="font-bold text-destructive">CRITICAL STEP:</span> When asked for a database mode, you MUST select **"Native Mode"**.
-            If you select "Datastore mode", your app will not work.
+            Go to your <strong className="text-destructive">Firebase Project Console</strong>.
           </li>
-          <li>For security rules, choose **"Start in test mode"**. You can change this later.</li>
-          <li>If a database already exists, please delete it and create a new one to ensure it is in **Native Mode**.</li>
+          <li>
+            In the sidebar, click <strong className="text-destructive">Firestore Database</strong>.
+          </li>
+          <li>
+            If you see a "Create database" button, click it.
+          </li>
+          <li>
+            <strong className="text-destructive uppercase">CRITICAL STEP:</strong> You MUST select <strong className="text-destructive">"Native Mode"</strong> for the database. If you select "Datastore mode", the app will not work.
+          </li>
+          <li>
+            If a database already exists, <strong className="text-destructive">DELETE IT</strong> and create a new one to ensure it is in <strong className="text-destructive">Native Mode</strong>.
+          </li>
+           <li>
+            Finally, double-check that the `NEXT_PUBLIC_FIREBASE_PROJECT_ID` in your `.env` file matches your actual Firebase Project ID.
+          </li>
         </ol>
       </AlertDescription>
     </Alert>
