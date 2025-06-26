@@ -67,13 +67,13 @@ export default async function DebugPage() {
                    {error?.code === 'not-found' ? (
                      <div className="space-y-4 my-2 p-3 border-l-4 border-destructive bg-foreground/5">
                         <p className="font-bold text-lg text-destructive">The error is `5 NOT_FOUND`.</p>
-                        <p className="text-base">This confirms the Project ID is likely wrong or the database is not in **Native Mode**.</p>
+                        <p className="text-base">This confirms the app is not connecting to the correct Firebase project or the database is in the wrong mode. It means your `.env` file might have the wrong **Project ID**, or your database was created in **Datastore Mode**.</p>
                         <ol className="list-decimal list-inside space-y-2 text-base mt-2">
                            <li>Go to your <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="underline font-bold">Firebase Project Settings</a> (click the ⚙️ icon).</li>
-                           <li>On the "General" tab, find your **Project ID**.</li>
-                           <li>Confirm the Project ID in your `.env` file **exactly matches** the one in the console. Using the Project Name will not work.</li>
+                           <li>On the "General" tab, find your **Project ID**. It is a unique identifier, not the display name.</li>
+                           <li>Confirm the Project ID in your `.env` file **exactly matches** the one in the console.</li>
                            <li>Go to the **Firestore Database** section in the Firebase console.</li>
-                           <li><strong className="uppercase">Crucially:</strong> If the database page says "Datastore Mode", you must delete it and create a new one, ensuring you select **Native Mode**. This cannot be changed later.</li>
+                           <li><strong className="uppercase">Crucially:</strong> If the database page says "Datastore Mode", you must delete it and create a new one. Ensure you select **Native Mode**. This cannot be changed later.</li>
                         </ol>
                      </div>
                    ) : (

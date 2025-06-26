@@ -88,31 +88,17 @@ function FirestoreErrorWarning() {
           <p className="text-sm font-medium mb-1">Project ID the app is currently using:</p>
           <p className="text-lg font-mono font-bold text-destructive">{projectId || "PROJECT ID NOT FOUND IN .env"}</p>
         </div>
-        <p className="mt-2 mb-4 text-base">
-           The error `5 NOT_FOUND` combined with **zero usage reported in your Firebase console** means the app is not connecting to the correct Firebase project. This is the most likely cause:
-        </p>
-        <div className="my-4 p-3 border-l-4 border-destructive bg-foreground/5">
-            <p className="font-bold text-lg text-destructive">You might be using the Project Name instead of the Project ID.</p>
-            <p className="text-base mt-1">A Firebase **Project Name** is a display name (e.g., "Calisthenics AI"). A **Project ID** is a unique identifier (e.g., "calisthenicsai-a1b2c"). You MUST use the **Project ID** in your `.env` file.</p>
+        <div className="space-y-4 my-2 p-3 border-l-4 border-destructive bg-foreground/5">
+            <p className="font-bold text-lg text-destructive">The error is `5 NOT_FOUND`.</p>
+            <p className="text-base">This confirms the app is not connecting to the correct Firebase project or the database is in the wrong mode. It means your `.env` file might have the wrong **Project ID**, or your database was created in **Datastore Mode**.</p>
+            <ol className="list-decimal list-inside space-y-2 text-base mt-2">
+                <li>Go to your <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="underline font-bold">Firebase Project Settings</a> (click the ⚙️ icon).</li>
+                <li>On the "General" tab, find your **Project ID**. It is a unique identifier, not the display name.</li>
+                <li>Confirm the Project ID in your `.env` file **exactly matches** the one in the console.</li>
+                <li>Go to the **Firestore Database** section in the Firebase console.</li>
+                <li><strong className="uppercase">Crucially:</strong> If the database page says "Datastore Mode", you must delete it and create a new one. Ensure you select **Native Mode**. This cannot be changed later.</li>
+            </ol>
         </div>
-        <p className="font-bold text-lg my-2">To fix this, please do the following:</p>
-        <ol className="list-decimal list-inside space-y-3 text-base">
-          <li>
-            Go to your <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="underline font-bold text-destructive">Firebase Project Settings</a> (click the ⚙️ icon next to "Project Overview").
-          </li>
-           <li>
-            Find your **Project ID** on the "General" tab.
-          </li>
-          <li>
-            Confirm that the Project ID shown above **exactly matches** the one in your Firebase Console. If it does not, correct the `NEXT_PUBLIC_FIREBASE_PROJECT_ID` value in your `.env` file.
-          </li>
-          <li>
-            In the Firebase Console, go to the **Firestore Database** section.
-          </li>
-          <li>
-            <strong className="text-destructive uppercase">CRITICAL STEP:</strong> You MUST have a database in <strong className="text-destructive">"Native Mode"</strong>. If it says "Datastore Mode", it will not work. You must delete it and create a new one, ensuring you select **Native Mode**.
-          </li>
-        </ol>
       </AlertDescription>
     </Alert>
   );
@@ -250,5 +236,3 @@ export default async function DashboardPage() {
     </div>
   );
 }
-
-    

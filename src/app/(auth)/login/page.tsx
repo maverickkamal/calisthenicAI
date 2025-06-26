@@ -14,11 +14,11 @@ export default function LoginPage() {
   return (
     <>
       <LoginForm />
-      <div className="mt-4 text-center">
-         <Button variant="link" asChild className="text-xs text-muted-foreground">
+       <div className="mt-4 text-center">
+         <Button variant="outline" asChild className="w-full">
             <Link href="/debug">
                <HelpCircle className="mr-2 h-4 w-4" />
-               Having trouble? Click here to debug the database connection.
+               Debug Database Connection
             </Link>
          </Button>
       </div>
