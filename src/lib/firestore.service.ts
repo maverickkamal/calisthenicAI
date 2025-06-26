@@ -1,9 +1,35 @@
 // src/lib/firestore.service.ts
 import { db } from './firebase';
-import { collection, addDoc, getDocs, query, where, orderBy, serverTimestamp, Timestamp, limit } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, Timestamp, limit, setDoc, doc } from 'firebase/firestore';
 import type { WorkoutLog, TrainingPlan } from './types';
 
 const firestoreNotFoundError = "Firestore Database Not Found: Please go to your Firebase project console, navigate to 'Firestore Database', and click 'Create database'. IMPORTANT: Ensure you select 'Native Mode' (not Datastore mode) and start in 'Test Mode' for development.";
+
+// ==== USER PROFILE ====
+
+/**
+ * Creates a user profile document in Firestore.
+ * This is typically called once upon user signup.
+ * @param userId The ID of the user (from Firebase Auth).
+ * @param userData The initial data for the user profile.
+ */
+export async function createUserProfile(userId: string, userData: { email: string }) {
+  try {
+    const userRef = doc(db, 'users', userId);
+    await setDoc(userRef, {
+      ...userData,
+      createdAt: serverTimestamp(),
+    });
+  } catch (error: any) {
+    if (error.code === 'not-found') {
+        console.error(`\n\n[CalisthenicsAI] FIRESTORE CONFIG ERROR: ${firestoreNotFoundError}\n\n`);
+        throw new Error("Firestore Database not found. Check server logs for setup instructions. Ensure it is in Native Mode.");
+    }
+    console.error("Error creating user profile in Firestore:", error);
+    throw new Error("Could not create user profile.");
+  }
+}
+
 
 // ==== WORKOUT LOGS ====
 

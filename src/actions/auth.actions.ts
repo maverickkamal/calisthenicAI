@@ -7,6 +7,7 @@ import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { auth } from '@/lib/firebase'; // Actual Firebase auth instance
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import { createUserProfile } from '@/lib/firestore.service';
 
 const LoginSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -110,6 +111,11 @@ export async function signup(prevState: SignupFormState | undefined, formData: F
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const idToken = await userCredential.user.getIdToken();
+    const userId = userCredential.user.uid;
+
+    // Create a corresponding user profile in Firestore
+    await createUserProfile(userId, { email });
+    
     cookies().set('firebaseAuthToken', idToken, { 
         httpOnly: true, 
         path: '/', 
