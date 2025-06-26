@@ -1,18 +1,16 @@
 // src/app/(app)/training-plan/page.tsx
-import type { Metadata } from 'next';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { TrainingPlanForm } from '@/components/training-plan/TrainingPlanForm';
-import { getCurrentUser } from '@/lib/auth';
-import { getTrainingPlans } from '@/lib/firestore.service';
-import { redirect } from 'next/navigation';
-import { Separator } from '@/components/ui/separator';
-import { AlertTriangle } from 'lucide-react';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+"use client";
 
-export const metadata: Metadata = {
-  title: 'My Training Plan - CalisthenicsAI',
-  description: 'View and manage your personalized calisthenics training plan.',
-};
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { TrainingPlanForm } from '@/components/training-plan/TrainingPlanForm';
+import { getTrainingPlans } from '@/lib/firestore.service';
+import type { TrainingPlan } from '@/lib/types';
+import { Separator } from '@/components/ui/separator';
+import { AlertTriangle, LoaderCircle } from 'lucide-react';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { auth } from '@/lib/firebase';
+import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 
 function FirestoreErrorWarning() {
   const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
@@ -41,15 +39,49 @@ function FirestoreErrorWarning() {
   );
 }
 
-export default async function TrainingPlanPage() {
-  const user = await getCurrentUser();
-  if (!user) {
-    redirect('/login');
+export default function TrainingPlanPage() {
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [plans, setPlans] = useState<TrainingPlan[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Set a title dynamically for client components
+    document.title = 'My Training Plan - CalisthenicsAI';
+    
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+        const { data, error: firestoreError } = await getTrainingPlans(currentUser.uid);
+        
+        if (firestoreError) {
+          setError(firestoreError);
+        } else {
+          setPlans(data);
+        }
+      } else {
+        setUser(null);
+        // Middleware handles the redirect, so we just clear state
+        setPlans([]);
+      }
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto flex h-[calc(100vh-10rem)] items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <LoaderCircle className="h-12 w-12 animate-spin text-primary" />
+          <p className="text-muted-foreground">Loading Your Training Plans...</p>
+        </div>
+      </div>
+    );
   }
 
-  const { data: plans, error: firestoreError } = await getTrainingPlans(user.uid);
-
-  if (firestoreError === 'not-found') {
+  if (error === 'not-found') {
     return (
       <div className="container mx-auto flex h-[calc(100vh-10rem)] items-center justify-center">
         <div className="w-full max-w-2xl">
@@ -72,8 +104,12 @@ export default async function TrainingPlanPage() {
 
       <div className="space-y-6">
         <h2 className="text-2xl font-bold font-headline">Your Saved Plans</h2>
-        {firestoreError ? (
-          <p className="text-muted-foreground">Could not load saved plans due to a database connection issue.</p>
+        {error ? (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>Could not load saved plans due to a database connection issue.</AlertDescription>
+          </Alert>
         ) : plans.length === 0 ? (
           <p className="text-muted-foreground">You haven&apos;t created any plans yet. Use the form above to add your first one!</p>
         ) : (
