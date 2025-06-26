@@ -85,25 +85,22 @@ export default function DashboardPage() {
                 setUser(currentUser);
                 const { data, error: firestoreError } = await getWorkoutLogs(currentUser.uid);
                 
-                setIsLoading(false);
-
                 if (firestoreError) {
-                    setError(firestoreError); // This will be 'not-found' or 'unknown'
+                    setError(firestoreError);
                 } else {
                     setWorkoutLogs(data);
                 }
             } else {
-                // Should be handled by middleware, which redirects to /login
-                setIsLoading(false);
                 setUser(null);
             }
+            setIsLoading(false);
         });
 
         return () => unsubscribe();
     }, []);
 
     useEffect(() => {
-      if (workoutLogs.length > 0) {
+      if (user && workoutLogs.length > 0) {
         setIsGoalLoading(true);
         const lastLog = workoutLogs[0];
         const recentLogs = workoutLogs.slice(0, 5);
@@ -133,7 +130,7 @@ export default function DashboardPage() {
           })
           .finally(() => setIsGoalLoading(false));
       }
-    }, [workoutLogs]);
+    }, [user, workoutLogs]);
 
     if (isLoading) {
         return (
@@ -166,14 +163,6 @@ export default function DashboardPage() {
              </Alert>
           </div>
         );
-    }
-
-    if (!user) {
-      return (
-        <div className="container mx-auto flex h-[calc(100vh-10rem)] items-center justify-center">
-           <p>Redirecting to login...</p>
-        </div>
-      );
     }
     
     const streak = calculateStreak(workoutLogs);
