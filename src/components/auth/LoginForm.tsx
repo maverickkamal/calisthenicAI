@@ -1,7 +1,7 @@
 // src/components/auth/LoginForm.tsx
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 import Link from "next/link";
 import { login, type LoginFormState } from "@/actions/auth.actions";
@@ -28,6 +28,7 @@ function SubmitButton({ isAuthenticating }: { isAuthenticating: boolean }) {
 export function LoginForm() {
   const initialState: LoginFormState = { message: null, errors: {} };
   const [state, dispatch] = useActionState(login, initialState);
+  const [isPending, startTransition] = useTransition();
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [clientError, setClientError] = useState<string | null>(null);
 
@@ -55,7 +56,9 @@ export function LoginForm() {
       serverFormData.append('userId', userCredential.user.uid);
       
       // Call server action
-      dispatch(serverFormData);
+      startTransition(() => {
+        dispatch(serverFormData);
+      });
     } catch (error: any) {
       setIsAuthenticating(false);
       console.error("Client-side login error:", error);
@@ -126,7 +129,7 @@ export function LoginForm() {
           )}
         </CardContent>
         <CardFooter className="flex flex-col gap-4">
-          <SubmitButton isAuthenticating={isAuthenticating} />
+          <SubmitButton isAuthenticating={isAuthenticating || isPending} />
           <p className="text-sm text-muted-foreground">
             Don&apos;t have an account?{" "}
             <Button variant="link" asChild className="p-0 h-auto">

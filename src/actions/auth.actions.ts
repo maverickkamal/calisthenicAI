@@ -39,7 +39,7 @@ export async function login(prevState: LoginFormState | undefined, formData: For
   const { idToken } = validatedFields.data;
 
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     cookieStore.set('firebaseAuthToken', idToken, { 
       httpOnly: true, 
       path: '/', 
@@ -81,7 +81,7 @@ export async function signup(prevState: SignupFormState | undefined, formData: F
     // Create a corresponding user profile in Firestore
     await createUserProfile(userId, { email });
     
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     cookieStore.set('firebaseAuthToken', idToken, { 
         httpOnly: true, 
         path: '/', 
@@ -101,7 +101,7 @@ export async function signup(prevState: SignupFormState | undefined, formData: F
 
 export async function logout() {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     cookieStore.delete('firebaseAuthToken');
   } catch (error) {
     console.error("Logout failed (Server):", error);
