@@ -9,7 +9,8 @@ import { Activity, Dumbbell, Lightbulb, Target, AlertTriangle, LoaderCircle } fr
 import Image from 'next/image';
 import { getWorkoutLogs } from '@/lib/firestore.service';
 import type { WorkoutLog } from '@/lib/types';
-import { getTrainingSuggestions, type TrainingSuggestionsInput } from '@/ai/flows/memory-context-flow';
+import { getAITrainingSuggestions } from '@/actions/ai.actions';
+import type { TrainingSuggestionsInput } from '@/ai/flows/memory-context-flow';
 import { differenceInCalendarDays, isToday, isYesterday } from 'date-fns';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { auth } from '@/lib/firebase';
@@ -122,8 +123,14 @@ export default function DashboardClientPage() {
             previousWeekSummary: previousWeekSummaryText
         };
 
-        getTrainingSuggestions(input)
-          .then(result => setNextGoal(result.suggestions))
+        getAITrainingSuggestions(input)
+          .then(result => {
+            if (result.success && result.data) {
+              setNextGoal(result.data.suggestions);
+            } else {
+              setNextGoal(result.error || "Could not generate a goal. Try again later.");
+            }
+          })
           .catch(err => {
             console.error("Error getting AI suggestion:", err);
             setNextGoal("Could not generate a goal. Try again later.");
