@@ -9,6 +9,16 @@ import { auth } from '@/lib/firebase'; // Actual Firebase auth instance
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { createUserProfile } from '@/lib/firestore.service';
 
+// Helper function to safely get cookies
+async function safeCookies() {
+  try {
+    return cookies();
+  } catch (error) {
+    console.error('Cookies not available in current context:', error);
+    throw new Error('Authentication requires a valid request context');
+  }
+}
+
 const LoginSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
   password: z.string().min(6, { message: "Password must be at least 6 characters." }),
@@ -47,7 +57,8 @@ export async function login(prevState: LoginFormState | undefined, formData: For
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const idToken = await userCredential.user.getIdToken();
-    cookies().set('firebaseAuthToken', idToken, { 
+    const cookieStore = await safeCookies();
+    cookieStore.set('firebaseAuthToken', idToken, { 
       httpOnly: true, 
       path: '/', 
       secure: process.env.NODE_ENV === 'production', 
@@ -116,7 +127,8 @@ export async function signup(prevState: SignupFormState | undefined, formData: F
     // Create a corresponding user profile in Firestore
     await createUserProfile(userId, { email });
     
-    cookies().set('firebaseAuthToken', idToken, { 
+    const cookieStore = await safeCookies();
+    cookieStore.set('firebaseAuthToken', idToken, { 
         httpOnly: true, 
         path: '/', 
         secure: process.env.NODE_ENV === 'production',
@@ -171,11 +183,17 @@ export async function logout() {
     // A robust implementation would involve an API route to revoke the token with Firebase Admin SDK.
     // For this app's scope, simply deleting the cookie is sufficient.
     await signOut(auth); // Clear client-side state
-    cookies().delete('firebaseAuthToken');
+    const cookieStore = await safeCookies();
+    cookieStore.delete('firebaseAuthToken');
   } catch (error) {
     console.error("Logout failed (Raw):", error);
     // Even if client signOut fails, we must delete the cookie
-    cookies().delete('firebaseAuthToken');
+    try {
+      const cookieStore = await safeCookies();
+      cookieStore.delete('firebaseAuthToken');
+    } catch (cookieError) {
+      console.error("Failed to delete cookie:", cookieError);
+    }
   }
   redirect('/login');
 }
