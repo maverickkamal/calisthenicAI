@@ -26,6 +26,8 @@ import {
   LogOut,
 } from 'lucide-react';
 import { logout } from '@/actions/auth.actions';
+import { signOut } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -38,6 +40,20 @@ const navItems = [
 
 export function AppSidebar() {
   const pathname = usePathname();
+
+  const handleLogout = async () => {
+    try {
+      // First, sign out from Firebase client-side
+      await signOut(auth);
+      
+      // Then call server action to clear the session cookie
+      await logout();
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Even if client signOut fails, try to clear the server session
+      await logout();
+    }
+  };
 
   return (
     <Sidebar collapsible="icon" variant="sidebar" side="left">
@@ -79,12 +95,14 @@ export function AppSidebar() {
                  </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-                 <form action={logout} className="w-full">
-                     <SidebarMenuButton type="submit" className="w-full text-destructive hover:bg-destructive/10 hover:text-destructive" tooltip="Log Out">
-                         <LogOut className="h-5 w-5" />
-                         <span>Log Out</span>
-                     </SidebarMenuButton>
-                 </form>
+                 <SidebarMenuButton 
+                   onClick={handleLogout} 
+                   className="w-full text-destructive hover:bg-destructive/10 hover:text-destructive" 
+                   tooltip="Log Out"
+                 >
+                     <LogOut className="h-5 w-5" />
+                     <span>Log Out</span>
+                 </SidebarMenuButton>
             </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>

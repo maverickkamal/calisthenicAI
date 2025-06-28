@@ -17,7 +17,7 @@ import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
 import { logout } from '@/actions/auth.actions';
 import { Logo } from '@/components/icons/Logo';
 import { useEffect, useState } from 'react';
-import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
+import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 
 export function AppHeader() {
@@ -42,10 +42,23 @@ export function AppHeader() {
     return nameOrEmail.substring(0, 2).toUpperCase();
   };
 
+  const handleLogout = async () => {
+    try {
+      // First, sign out from Firebase client-side
+      await signOut(auth);
+      
+      // Then call server action to clear the session cookie
+      await logout();
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Even if client signOut fails, try to clear the server session
+      await logout();
+    }
+  };
+
   const displayName = user?.displayName || user?.email?.split('@')[0] || "User";
   const userEmail = user?.email || "Not logged in";
   const userAvatarUrl = user?.photoURL;
-
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
@@ -92,14 +105,10 @@ export function AppHeader() {
               <span>Profile</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <form action={logout}>
-              <DropdownMenuItem asChild>
-                <button type="submit" className="w-full text-left">
-                  <LogOutIcon className="mr-2 h-4 w-4" />
-                  <span>Log out</span>
-                </button>
-              </DropdownMenuItem>
-            </form>
+            <DropdownMenuItem onClick={handleLogout}>
+              <LogOutIcon className="mr-2 h-4 w-4" />
+              <span>Log out</span>
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

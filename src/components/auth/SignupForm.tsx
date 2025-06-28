@@ -1,8 +1,7 @@
-
 // src/components/auth/SignupForm.tsx
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import Link from "next/link";
 import { signup, type SignupFormState } from "@/actions/auth.actions";
@@ -12,12 +11,16 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
-function SubmitButton() {
+function SubmitButton({ isAuthenticating }: { isAuthenticating: boolean }) {
   const { pending } = useFormStatus();
+  const isLoading = pending || isAuthenticating;
+  
   return (
-    <Button type="submit" className="w-full" disabled={pending}>
-      {pending ? "Creating account..." : "Create Account"}
+    <Button type="submit" className="w-full" disabled={isLoading}>
+      {isLoading ? "Creating account..." : "Create Account"}
     </Button>
   );
 }
@@ -25,6 +28,74 @@ function SubmitButton() {
 export function SignupForm() {
   const initialState: SignupFormState = { message: null, errors: {} };
   const [state, dispatch] = useActionState(signup, initialState);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [clientError, setClientError] = useState<string | null>(null);
+
+  const handleSubmit = async (formData: FormData) => {
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+    const confirmPassword = formData.get('confirmPassword') as string;
+
+    if (!email || !password || !confirmPassword) {
+      setClientError("All fields are required.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setClientError("Passwords do not match.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setClientError("Password must be at least 6 characters.");
+      return;
+    }
+
+    setIsAuthenticating(true);
+    setClientError(null);
+
+    try {
+      // Client-side Firebase authentication
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const idToken = await userCredential.user.getIdToken();
+      
+      // Create new FormData with token for server action
+      const serverFormData = new FormData();
+      serverFormData.append('idToken', idToken);
+      serverFormData.append('email', email);
+      serverFormData.append('userId', userCredential.user.uid);
+      
+      // Call server action
+      dispatch(serverFormData);
+    } catch (error: any) {
+      setIsAuthenticating(false);
+      console.error("Client-side signup error:", error);
+      
+      let errorMessage = "Signup failed. Please try again.";
+      if (error.code) {
+        switch (error.code) {
+          case 'auth/email-already-in-use':
+            errorMessage = "This email address is already in use.";
+            break;
+          case 'auth/weak-password':
+            errorMessage = "The password is too weak. Please choose a stronger password.";
+            break;
+          case 'auth/invalid-email':
+            errorMessage = "Invalid email format.";
+            break;
+          case 'auth/operation-not-allowed':
+            errorMessage = "Email/Password sign-up is not enabled for this project.";
+            break;
+          case 'auth/configuration-not-found':
+            errorMessage = "Firebase configuration error. Please ensure your API key and project settings are correct.";
+            break;
+          default:
+            errorMessage = error.message || `An unexpected error occurred (code: ${error.code}).`;
+        }
+      }
+      setClientError(errorMessage);
+    }
+  };
 
   return (
     <Card>
@@ -32,7 +103,7 @@ export function SignupForm() {
         <CardTitle className="font-headline text-2xl">Create Account</CardTitle>
         <CardDescription>Join CalisthenicsAI and start tracking your progress.</CardDescription>
       </CardHeader>
-      <form action={dispatch}>
+      <form action={handleSubmit}>
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
@@ -42,13 +113,7 @@ export function SignupForm() {
               type="email"
               placeholder="you@example.com"
               required
-              aria-describedby="email-error"
             />
-            {state?.errors?.email && (
-              <p id="email-error" className="text-sm text-destructive">
-                {state.errors.email.join(", ")}
-              </p>
-            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
@@ -58,13 +123,7 @@ export function SignupForm() {
               type="password"
               placeholder="•••••••• (min. 6 characters)"
               required
-              aria-describedby="password-error"
             />
-            {state?.errors?.password && (
-              <p id="password-error" className="text-sm text-destructive">
-                {state.errors.password.join(", ")}
-              </p>
-            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="confirmPassword">Confirm Password</Label>
@@ -74,27 +133,21 @@ export function SignupForm() {
               type="password"
               placeholder="••••••••"
               required
-              aria-describedby="confirmPassword-error"
             />
-            {state?.errors?.confirmPassword && (
-              <p id="confirmPassword-error" className="text-sm text-destructive">
-                {state.errors.confirmPassword.join(", ")}
-              </p>
-            )}
           </div>
 
-          {state?.errors?.form && (
+          {(clientError || state?.errors?.form) && (
              <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
               <AlertTitle>Signup Error</AlertTitle>
               <AlertDescription>
-                {state.errors.form.join(", ")}
+                {clientError || state?.errors?.form?.join(", ")}
               </AlertDescription>
             </Alert>
           )}
         </CardContent>
         <CardFooter className="flex flex-col gap-4">
-          <SubmitButton />
+          <SubmitButton isAuthenticating={isAuthenticating} />
           <p className="text-sm text-muted-foreground">
             Already have an account?{" "}
             <Button variant="link" asChild className="p-0 h-auto">
