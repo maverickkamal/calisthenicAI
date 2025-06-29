@@ -1,3 +1,4 @@
+import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { z } from 'zod';
@@ -19,12 +20,15 @@ export async function POST(request: NextRequest) {
     }
 
     const { idToken } = validatedData.data;
-    const cookieStore = cookies();
+    
+    // Get cookies within the request handler
+    const cookieStore = await cookies();
     
     cookieStore.set('firebaseAuthToken', idToken, {
       httpOnly: true,
       path: '/',
       secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
       maxAge: 60 * 60 * 2, // 2 hours
     });
 
@@ -38,9 +42,9 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function DELETE(request: NextRequest) {
+export async function DELETE() {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     cookieStore.delete('firebaseAuthToken');
     
     return NextResponse.json({ success: true });
