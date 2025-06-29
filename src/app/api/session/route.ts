@@ -37,3 +37,18 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const cookieStore = await cookies();
+    cookieStore.delete('firebaseAuthToken');
+    
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Session deletion error:', error);
+    return NextResponse.json(
+      { error: 'Failed to clear session' },
+      { status: 500 }
+    );
+  }
+}
