@@ -3,8 +3,9 @@
 
 import { useActionState, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { login, type LoginFormState } from "@/actions/auth.actions";
+import { validateLogin, type LoginFormState } from "@/actions/auth.actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,10 +28,11 @@ function SubmitButton({ isAuthenticating }: { isAuthenticating: boolean }) {
 
 export function LoginForm() {
   const initialState: LoginFormState = { message: null, errors: {} };
-  const [state, dispatch] = useActionState(login, initialState);
+  const [state, dispatch] = useActionState(validateLogin, initialState);
   const [isPending, startTransition] = useTransition();
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [clientError, setClientError] = useState<string | null>(null);
+  const router = useRouter();
 
   const handleSubmit = async (formData: FormData) => {
     const email = formData.get('email') as string;
@@ -49,16 +51,31 @@ export function LoginForm() {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const idToken = await userCredential.user.getIdToken();
       
-      // Create new FormData with token for server action
+      // Set session cookie via API route
+      const sessionResponse = await fetch('/api/session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ idToken }),
+      });
+
+      if (!sessionResponse.ok) {
+        throw new Error('Failed to establish session');
+      }
+
+      // Validate login data with server action
       const serverFormData = new FormData();
-      serverFormData.append('idToken', idToken);
       serverFormData.append('email', email);
       serverFormData.append('userId', userCredential.user.uid);
       
-      // Call server action
+      // Call server action for validation
       startTransition(() => {
         dispatch(serverFormData);
       });
+
+      // Navigate to dashboard
+      router.push('/dashboard');
     } catch (error: any) {
       setIsAuthenticating(false);
       console.error("Client-side login error:", error);

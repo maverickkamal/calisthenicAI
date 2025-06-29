@@ -14,15 +14,16 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Menu, UserCircle, LogOut as LogOutIcon } from 'lucide-react';
 import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
-import { logout } from '@/actions/auth.actions';
 import { Logo } from '@/components/icons/Logo';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 
 export function AppHeader() {
   const { isMobile } = useSidebar();
   const [user, setUser] = useState<FirebaseUser | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -47,12 +48,17 @@ export function AppHeader() {
       // First, sign out from Firebase client-side
       await signOut(auth);
       
-      // Then call server action to clear the session cookie
-      await logout();
+      // Clear session cookie via API route
+      await fetch('/api/session', {
+        method: 'DELETE',
+      });
+
+      // Navigate to login
+      router.push('/login');
     } catch (error) {
       console.error("Logout error:", error);
-      // Even if client signOut fails, try to clear the server session
-      await logout();
+      // Navigate to login even if logout fails
+      router.push('/login');
     }
   };
 

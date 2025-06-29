@@ -25,7 +25,7 @@ import {
   Settings,
   LogOut,
 } from 'lucide-react';
-import { logout } from '@/actions/auth.actions';
+import { useRouter } from 'next/navigation';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 
@@ -40,18 +40,24 @@ const navItems = [
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
 
   const handleLogout = async () => {
     try {
       // First, sign out from Firebase client-side
       await signOut(auth);
       
-      // Then call server action to clear the session cookie
-      await logout();
+      // Clear session cookie via API route
+      await fetch('/api/session', {
+        method: 'DELETE',
+      });
+
+      // Navigate to login
+      router.push('/login');
     } catch (error) {
       console.error("Logout error:", error);
-      // Even if client signOut fails, try to clear the server session
-      await logout();
+      // Navigate to login even if logout fails
+      router.push('/login');
     }
   };
 

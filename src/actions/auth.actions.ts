@@ -2,109 +2,71 @@
 "use server";
 
 import { z } from "zod";
-import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
 import { createUserProfile } from '@/lib/firestore.service';
 
 const TokenSchema = z.object({
-  idToken: z.string().min(1, { message: "Invalid authentication token." }),
   email: z.string().email({ message: "Invalid email address." }),
   userId: z.string().min(1, { message: "Invalid user ID." }),
 });
 
 const SignupTokenSchema = z.object({
-  idToken: z.string().min(1, { message: "Invalid authentication token." }),
   email: z.string().email({ message: "Invalid email address." }),
   userId: z.string().min(1, { message: "Invalid user ID." }),
 });
 
 export type LoginFormState = {
   errors?: {
-    idToken?: string[];
     form?: string[];
   };
   message?: string | null;
 };
 
-export async function login(prevState: LoginFormState | undefined, formData: FormData): Promise<LoginFormState> {
+export async function validateLogin(prevState: LoginFormState | undefined, formData: FormData): Promise<LoginFormState> {
   const validatedFields = TokenSchema.safeParse(Object.fromEntries(formData.entries()));
 
   if (!validatedFields.success) {
     return {
       errors: validatedFields.error.flatten().fieldErrors,
-      message: "Invalid authentication data. Login failed.",
+      message: "Invalid user data.",
     };
   }
 
-  const { idToken } = validatedFields.data;
-
-  try {
-    const cookieStore = await cookies();
-    cookieStore.set('firebaseAuthToken', idToken, { 
-      httpOnly: true, 
-      path: '/', 
-      secure: process.env.NODE_ENV === 'production', 
-      maxAge: 60 * 60 * 2 // 2 hours
-    });
-  } catch (error: any) {
-    console.error("Login Error (Server):", error);
-    return {
-      errors: { form: ["Failed to establish session. Please try again."] },
-      message: "Login failed.",
-    };
-  }
-  
-  redirect('/dashboard');
+  return {
+    message: "Login validation successful.",
+  };
 }
 
 export type SignupFormState = {
   errors?: {
-    idToken?: string[];
     form?: string[];
   };
   message?: string | null;
 };
 
-export async function signup(prevState: SignupFormState | undefined, formData: FormData): Promise<SignupFormState> {
+export async function createUserProfileAction(prevState: SignupFormState | undefined, formData: FormData): Promise<SignupFormState> {
   const validatedFields = SignupTokenSchema.safeParse(Object.fromEntries(formData.entries()));
 
   if (!validatedFields.success) {
     return {
       errors: validatedFields.error.flatten().fieldErrors,
-      message: "Invalid authentication data. Signup failed.",
+      message: "Invalid user data.",
     };
   }
 
-  const { idToken, email, userId } = validatedFields.data;
+  const { email, userId } = validatedFields.data;
 
   try {
     // Create a corresponding user profile in Firestore
     await createUserProfile(userId, { email });
-    
-    const cookieStore = await cookies();
-    cookieStore.set('firebaseAuthToken', idToken, { 
-        httpOnly: true, 
-        path: '/', 
-        secure: process.env.NODE_ENV === 'production',
-        maxAge: 60 * 60 * 2 // 2 hours
-    });
+
+    return {
+      message: "User profile created successfully.",
+    };
   } catch (error: any) {
     console.error("Signup Error (Server):", error);
     return {
-      errors: { form: ["Failed to create user profile or establish session. Please try again."] },
-      message: "Signup failed.",
+      errors: { form: ["Failed to create user profile. Please try again."] },
+      message: "User profile creation failed.",
     };
   }
-  
-  redirect('/dashboard');
-}
-
-export async function logout() {
-  try {
-    const cookieStore = await cookies();
-    cookieStore.delete('firebaseAuthToken');
-  } catch (error) {
-    console.error("Logout failed (Server):", error);
-  }
-  redirect('/login');
 }

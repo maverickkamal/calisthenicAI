@@ -3,8 +3,9 @@
 
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { signup, type SignupFormState } from "@/actions/auth.actions";
+import { createUserProfileAction, type SignupFormState } from "@/actions/auth.actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,9 +28,10 @@ function SubmitButton({ isAuthenticating }: { isAuthenticating: boolean }) {
 
 export function SignupForm() {
   const initialState: SignupFormState = { message: null, errors: {} };
-  const [state, dispatch] = useActionState(signup, initialState);
+  const [state, dispatch] = useActionState(createUserProfileAction, initialState);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [clientError, setClientError] = useState<string | null>(null);
+  const router = useRouter();
 
   const handleSubmit = async (formData: FormData) => {
     const email = formData.get('email') as string;
@@ -59,14 +61,29 @@ export function SignupForm() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const idToken = await userCredential.user.getIdToken();
       
-      // Create new FormData with token for server action
+      // Create user profile via server action
       const serverFormData = new FormData();
-      serverFormData.append('idToken', idToken);
       serverFormData.append('email', email);
       serverFormData.append('userId', userCredential.user.uid);
       
-      // Call server action
+      // Call server action to create user profile
       dispatch(serverFormData);
+
+      // Set session cookie via API route
+      const sessionResponse = await fetch('/api/session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ idToken }),
+      });
+
+      if (!sessionResponse.ok) {
+        throw new Error('Failed to establish session');
+      }
+
+      // Navigate to dashboard
+      router.push('/dashboard');
     } catch (error: any) {
       setIsAuthenticating(false);
       console.error("Client-side signup error:", error);
