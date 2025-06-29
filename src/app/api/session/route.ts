@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     const { idToken } = validatedData.data;
     
     // Get cookies within the request handler
-    const cookieStore = await cookies();
+    const cookieStore = cookies();
     
     cookieStore.set('firebaseAuthToken', idToken, {
       httpOnly: true,
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE() {
   try {
-    const cookieStore = await cookies();
+    const cookieStore = cookies();
     cookieStore.delete('firebaseAuthToken');
     
     return NextResponse.json({ success: true });
